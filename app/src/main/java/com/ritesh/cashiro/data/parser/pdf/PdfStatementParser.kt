@@ -12,6 +12,12 @@ import java.util.Locale
 interface PdfStatementParser {
     fun canHandle(text: String): Boolean
     fun parse(text: String): List<ParsedTransaction>
+
+    /**
+     * False when the statement only carries calendar dates, so imported rows
+     * need a wider duplicate-matching window.
+     */
+    fun hasTimeOfDay(): Boolean = true
 }
 
 class GPayPdfParser : PdfStatementParser {
