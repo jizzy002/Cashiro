@@ -111,12 +111,12 @@ object Constants {
                 sizeBytes = 497_516_544L
             ),
             ChatModelInfo(
-                id = "gemma-3-270m",
-                displayName = "Gemma 3 270M",
+                id = "smollm2-360m",
+                displayName = "SmolLM2 360M",
                 tierLabel = "Tiny · fastest",
-                url = "https://huggingface.co/litert-community/gemma-3-270m-it/resolve/main/gemma3-270m-it-q8.task?download=true",
-                fileName = "gemma3-270m-it-q8.task",
-                sizeBytes = 303_950_933L
+                url = "https://huggingface.co/litert-community/SmolLM2-360M-Instruct/resolve/main/SmolLM2_360M_instruct.litertlm?download=true",
+                fileName = "smollm2-360m-instruct.litertlm",
+                sizeBytes = 373_719_040L
             )
         )
 

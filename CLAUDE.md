@@ -15,7 +15,7 @@ Please reference these documents when working on this project:
 3. **State Management**: Unidirectional Data Flow with StateFlow
 4. **DI**: Hilt for dependency injection
 5. **Database**: Room for local storage
-6. **AI/ML**: LiteRT/MediaPipe on-device LLM with selectable models (Qwen2.5 1.5B default, Qwen3 0.6B, Gemma 3 270M)
+6. **AI/ML**: LiteRT/MediaPipe on-device LLM with selectable models (Qwen2.5 1.5B default, Qwen3 0.6B, SmolLM2 360M)
 7. **Background**: WorkManager for SMS scanning
 
 ## Design Principles

@@ -34,7 +34,7 @@ class ModelLoadPolicyTest {
             ModelLoadPolicy.needsInitialization(
                 isInitialized = true,
                 loadedPath = "/models/qwen.task",
-                selectedPath = "/models/gemma.task"
+                selectedPath = "/models/smollm.task"
             )
         )
     }

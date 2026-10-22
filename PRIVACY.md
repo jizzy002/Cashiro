@@ -8,7 +8,7 @@ Cashiro is built with privacy as the core principle. We believe your financial d
 
 ## 100% On-Device Processing
 
-**All data processing happens locally on your device.** We use on-device LiteRT/MediaPipe LLMs (Qwen 2.5 by default, with smaller Qwen 3 0.6B and Gemma 3 270M options) for AI features, ensuring:
+**All data processing happens locally on your device.** We use on-device LiteRT/MediaPipe LLMs (Qwen 2.5 by default, with smaller Qwen 3 0.6B and SmolLM2 360M options) for AI features, ensuring:
 
 - ✅ **No cloud servers** - Your data never leaves your phone
 - ✅ **No data collection** - We don't collect, store, or transmit any user data
@@ -69,7 +69,7 @@ Cashiro does **NOT** use:
 ## AI Features
 
 ### On-Device AI Assistant
-- Uses on-device LiteRT models (Qwen 2.5 1.5B default, ~1.6 GB; Qwen 3 0.6B and Gemma 3 270M are smaller options)
+- Uses on-device LiteRT models (Qwen 2.5 1.5B default, ~1.6 GB; Qwen 3 0.6B and SmolLM2 360M are smaller options)
 - Model runs entirely on your device using LiteRT-LM / MediaPipe LLM Inference
 - After initial download, no internet connection required
 - Conversations are not stored or transmitted

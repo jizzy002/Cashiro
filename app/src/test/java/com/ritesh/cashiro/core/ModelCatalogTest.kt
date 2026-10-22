@@ -35,6 +35,16 @@ class ModelCatalogTest {
     }
 
     @Test
+    fun `a tiny option is smaller than the fast tier`() {
+        val models = Constants.ModelDownload.models
+        val tiny = models.first { it.id == "smollm2-360m" }
+        val fast = models.first { it.id == "qwen3-0.6b" }
+
+        assertEquals("SmolLM2 360M", tiny.displayName)
+        assertTrue(tiny.sizeBytes < fast.sizeBytes)
+    }
+
+    @Test
     fun `unknown model ids resolve to the default`() {
         val default = Constants.ModelDownload.model(Constants.ModelDownload.defaultModelId)
         assertEquals(default, Constants.ModelDownload.model("does-not-exist"))
