@@ -28,12 +28,21 @@ object CategoryMapping {
     // --- helpers ---
     private val regexCache = mutableMapOf<String, Regex>()
 
+    private fun foldDiacritics(text: String): String {
+        return text
+            .replace('č', 'c')
+            .replace('ć', 'c')
+            .replace('š', 's')
+            .replace('ž', 'z')
+            .replace('đ', 'd')
+    }
+
     private fun matches(
         merchantRaw: String,
         anyOf: Set<String>,
         noneOf: Set<String> = emptySet()
     ): Boolean {
-        val m = merchantRaw.lowercase(Locale.ROOT)
+        val m = foldDiacritics(merchantRaw.lowercase(Locale.ROOT))
         if (noneOf.any { m.contains(it) }) return false
 
         // Check for exact matches or word boundaries
@@ -259,7 +268,18 @@ object CategoryMapping {
         "salkara",
         "the coffee lab",
         "top cafeteria",
-        "bosporus sharjah"
+        "bosporus sharjah",
+
+        // Raiffeisen BiH / Croatian merchants from user statements
+        "mlinar",
+        "restoran",
+        "pivnica",
+        "animal caffe",
+        "yellow submarine",
+        "khala rest. bar",
+        "khala restaurant",
+        "monaco fast food",
+        "fast food"
     )
 
     private val GROCERY = setOf(
@@ -337,8 +357,23 @@ object CategoryMapping {
         "foodland",
         "luluhypermarket",
         "majid al futtaim hypmk",
-        "majid al futtaim hypm"
+        "majid al futtaim hypm",
 
+        // Raiffeisen BiH / Croatian merchants from user statements
+        "konzum",
+        "spar",
+        "lidl",
+        "studenac",
+        "voli",
+        "tommy",
+        "interspar",
+        "fis",
+        "bingo",
+        "ivanovic",
+        "market a",
+        "zif",
+        "tropic",
+        "zabrisce"
     )
 
     private val TRANSPORT = setOf(
@@ -386,8 +421,27 @@ object CategoryMapping {
         "point sbia",
         "ptt",
         "pttst.c",
-        "smart auto"
+        "smart auto",
 
+        // Raiffeisen BiH / Croatian merchants from user statements
+        "pavic",
+        "papic",
+        "benz crpka",
+        "tioil",
+        "nestro petrol",
+        "coral energy",
+        "hifa",
+        "ina",
+        "bp livno",
+        "bp neskovic",
+        "bp konjic",
+        "almy",
+        "jpk",
+        "bs bugojno",
+        "jp autoceste",
+        "naplatna",
+        "zovko auto",
+        "autocesta"
     )
 
     private val SHOPPING = setOf(
@@ -395,7 +449,7 @@ object CategoryMapping {
         "snapdeal", "shopclues", "firstcry", "pepperfry", "urban ladder",
         "store", "mart"
     )
-    private val SHOPPING_EXCLUDE = setOf("jiomart", "dmart")
+    private val SHOPPING_EXCLUDE = setOf("jiomart", "dmart", "nextdns")
 
     // --- Newly Added Merchants ---
     private val SHOPPING_EXTENDED = setOf(
@@ -515,7 +569,13 @@ object CategoryMapping {
         "empire tower",
         "the empire tower",
 
-        )
+        // Raiffeisen BiH / Croatian merchants from user statements
+        "tisak",
+        "box now",
+        "temu",
+        "aliexpress",
+        "suvenirnica"
+    )
 
     private val UTILITIES = setOf(
         "electricity",
@@ -551,7 +611,14 @@ object CategoryMapping {
         "smart dubai government",
         "paysolut",
 
-
+        // Raiffeisen BiH / Croatian merchants from user statements
+        "hrvatski telekom",
+        "starlink",
+        "cloudflare",
+        "nextdns",
+        "google one",
+        "trajni nalog",
+        "standing order"
     )
 
     private val ENTERTAINMENT = setOf(
@@ -607,20 +674,30 @@ object CategoryMapping {
         "credit card", "yes bank", "idfc", "indusind", "pnb", "canara", "union bank", "rbl", "prime commercial bank",
 
         // --- Newly Added Merchants ---
-        "atm withdrawal",
         "bank transfer",
         "bank account operation",
         "bank cheque operation",
         "bank cash operation",
         "my fatoorah",
-        "cash withdrawal",
         "cash deposit",
         "refund",
         "outward remittance",
         "inward remittance",
         "transfer to",
         "transfer from",
-        "transfer: "
+        "transfer: ",
+
+        // Raiffeisen BiH / Croatian merchants from user statements
+        "wise",
+        "aircash",
+        "euro kontakt"
+    )
+
+    private val CASH_WITHDRAWAL = setOf(
+        "atm",
+        "bankomat",
+        "atm withdrawal",
+        "cash withdrawal"
     )
 
     private val PERSONAL_CARE = setOf(
@@ -652,8 +729,11 @@ object CategoryMapping {
         "mandarin oriental spa",
         "o.c.c.black amber sath",
         "o.c.c.public co.,ltd",
-        "phetsathorn"
+        "phetsathorn",
 
+        // Raiffeisen BiH / Croatian merchants from user statements
+        "mueller",
+        "dm"
     )
 
     private val EDUCATION = setOf(
@@ -707,11 +787,25 @@ object CategoryMapping {
         "recovery", "charge", "fee", "penalty", "maintenance", "non-maintenance",
         "minimum balance", "sms charge", "atm recovery", "service charge",
         "annual fee", "processing fee", "convenience fee", "late payment",
-        "cheque returned"
+        "cheque returned",
+
+        // Raiffeisen BiH / Croatian merchants from user statements
+        "naknada",
+        "provizija"
     )
 
     private val CC_PAYMENT = setOf(
         "bbps", "bill payment", "credit card payment", "cc payment", "card payment"
+    )
+
+    private val INCOME = setOf(
+        "plata",
+        "plaća",
+        "zarada",
+        "honorar",
+        "mirovina",
+        "penzija",
+        "manpower"
     )
 
     // Travel keywords (grouped for readability)
@@ -901,6 +995,8 @@ object CategoryMapping {
         Rule("Tax", TAX),
         Rule("Hidden Charges", BANK_CHARGE),
         Rule("Credit Bill", CC_PAYMENT),
+        Rule("Salary", INCOME),
+        Rule("Cash Withdrawal", CASH_WITHDRAWAL),
         Rule("Food & Drinks", FOOD),
         Rule("Groceries", GROCERY),
         Rule("Transport", TRANSPORT),

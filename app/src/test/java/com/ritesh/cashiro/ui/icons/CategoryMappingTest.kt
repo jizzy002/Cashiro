@@ -77,6 +77,116 @@ class CategoryMappingTest {
         assertEquals("Miscellaneous", getCategory("Twin Made"))
         findDuplicateKeywords()
     }
+
+    @Test
+    fun testBosnianMerchants() {
+        // Groceries
+        assertEquals("Groceries", getCategory("KONZUM P1002 LIVNO"))
+        assertEquals("Groceries", getCategory("SPAR BiH"))
+        assertEquals("Groceries", getCategory("LIDL HRVATSKA 1234"))
+        assertEquals("Groceries", getCategory("STUDENAC 4"))
+        assertEquals("Groceries", getCategory("VOLI Rijeka"))
+        assertEquals("Groceries", getCategory("TOMMY 7"))
+        assertEquals("Groceries", getCategory("INTERSPAR"))
+        assertEquals("Groceries", getCategory("FIS 6"))
+        assertEquals("Groceries", getCategory("BINGO"))
+        assertEquals("Groceries", getCategory("IVANOVIC DOO MARKET"))
+        assertEquals("Groceries", getCategory("MARKET A"))
+        assertEquals("Groceries", getCategory("ZIF DOO PJ MARKET 3"))
+        assertEquals("Groceries", getCategory("POS PJ TROPIC 12"))
+        assertEquals("Groceries", getCategory("ZABRISCE B&M DOO PJ 5"))
+
+        // Food
+        assertEquals("Food & Drinks", getCategory("MLINAR 12"))
+        assertEquals("Food & Drinks", getCategory("Restoran El Rey"))
+        assertEquals("Food & Drinks", getCategory("PIVNICA STARI JADRAN"))
+        assertEquals("Food & Drinks", getCategory("Animal Caffe"))
+        assertEquals("Food & Drinks", getCategory("Yellow Submarine"))
+        assertEquals("Food & Drinks", getCategory("Khala Rest. Bar"))
+        assertEquals("Food & Drinks", getCategory("MONACO FAST FOOD"))
+        assertEquals("Food & Drinks", getCategory("MCDONALDS KIOSK 1122"))
+
+        // Transport
+        assertEquals("Transport", getCategory("PAVIC DOO BENZ CRPKA"))
+        assertEquals("Transport", getCategory("PAPIC DOO PJ 5"))
+        assertEquals("Transport", getCategory("TIOIL D.O.O. STARA BIL"))
+        assertEquals("Transport", getCategory("NESTRO PETROL"))
+        assertEquals("Transport", getCategory("Coral Energy"))
+        assertEquals("Transport", getCategory("HIFA OIL"))
+        assertEquals("Transport", getCategory("INA SPLITSMOKOVIK"))
+        assertEquals("Transport", getCategory("BP LIVNO"))
+        assertEquals("Transport", getCategory("BP NESKOVIC"))
+        assertEquals("Transport", getCategory("ALMY DOO PJ BP I ZAVID"))
+        assertEquals("Transport", getCategory("JPK BS PETROVAC BULJA"))
+        assertEquals("Transport", getCategory("BS BUGOJNO"))
+        assertEquals("Transport", getCategory("ZOVKO AUTO"))
+        assertEquals("Transport", getCategory("JP AUTOCESTE FBIH BNM"))
+        assertEquals("Transport", getCategory("NAPLATNA STANICA"))
+
+        // Bills
+        assertEquals("Bill", getCategory("HRVATSKI TELEKOM"))
+        assertEquals("Bill", getCategory("STARLINK Internet Serv"))
+        assertEquals("Bill", getCategory("CLOUDFLARE"))
+        assertEquals("Bill", getCategory("NEXTDNS"))
+        assertEquals("Bill", getCategory("GOOGLE Google One"))
+        assertEquals("Bill", getCategory("Trajni nalog - 123456"))
+
+        // Shopping
+        assertEquals("Shopping", getCategory("TISAK P4210"))
+        assertEquals("Shopping", getCategory("Box Now d.o.o."))
+        assertEquals("Shopping", getCategory("TEMU"))
+        assertEquals("Shopping", getCategory("aliexpress"))
+        assertEquals("Shopping", getCategory("PAYPAL VTECH 3371"))
+        assertEquals("Shopping", getCategory("Kotorska Suvenirnica"))
+
+        // Personal
+        assertEquals("Personal", getCategory("MUELLER 1293 MA"))
+        assertEquals("Personal", getCategory("DM 2145"))
+
+        // Business
+        assertEquals("Business", getCategory("Wise"))
+        assertEquals("Business", getCategory("Aircash AC"))
+        assertEquals("Business", getCategory("Euro Kontakt"))
+
+        // Hidden charges
+        assertEquals("Hidden Charges", getCategory("Naknada za vodenje paketa"))
+        assertEquals("Hidden Charges", getCategory("Provizija za odrzavanje"))
+
+        // Unknown merchants stay unclassified
+        assertEquals("Miscellaneous", getCategory("IU IT TEAM"))
+        assertEquals("Miscellaneous", getCategory("Formula"))
+    }
+
+    @Test
+    fun testCashWithdrawalRule() {
+        assertEquals("Cash Withdrawal", getCategory("ATM FILIJALA LIVNO"))
+        assertEquals("Cash Withdrawal", getCategory("ATM LIVNO KONZUM"))
+        assertEquals("Cash Withdrawal", getCategory("BANKOMAT LIVNO"))
+        assertEquals("Cash Withdrawal", getCategory("Cash ATM RBBH"))
+        assertEquals("Cash Withdrawal", getCategory("Cash withdrawal"))
+    }
+
+    @Test
+    fun testDiacriticFolding() {
+        assertEquals("Groceries", getCategory("Ivanović Market"))
+        assertEquals("Groceries", getCategory("Zabrišće B&M"))
+        assertEquals("Transport", getCategory("Pavić Doo Benzinska"))
+    }
+
+    @Test
+    fun testPaypalNextdnsNotShopping() {
+        assertEquals("Bill", getCategory("paypal nextdns"))
+    }
+
+    @Test
+    fun testIncomeKeywords() {
+        assertEquals("Salary", getCategory("UPLATA MANPOWER DOO SARAJEVO"))
+        assertEquals("Salary", getCategory("PLATA M BH DOO SARAJEVO"))
+        assertEquals("Salary", getCategory("ZARADA"))
+        assertEquals("Salary", getCategory("Honorar"))
+        assertEquals("Salary", getCategory("Mirovina"))
+        assertEquals("Salary", getCategory("Penzija"))
+    }
 }
 
 // Helper function to test categorization
