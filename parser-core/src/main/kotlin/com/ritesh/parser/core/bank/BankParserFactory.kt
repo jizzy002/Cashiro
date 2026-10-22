@@ -140,7 +140,8 @@ object BankParserFactory {
         SampathBankParser(),  // Sampath Bank (Sri Lanka)
         EnparaBankParser(),  // Enpara Bank (Turkey)
         SparkasseRheinMaasParser(),  // Sparkasse Rhein-Maas (Germany)
-        AltanaFCUParser()  // Altana FCU (USA)
+        AltanaFCUParser(),  // Altana FCU (USA)
+        RaiffeisenBiHParser()  // Raiffeisen Bank BiH (push notifications)
         // Add more bank parsers here as we implement them
     )
 
