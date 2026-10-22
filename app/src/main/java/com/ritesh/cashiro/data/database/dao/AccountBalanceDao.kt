@@ -22,7 +22,7 @@ abstract class AccountBalanceDao {
     @Query("""
         SELECT * FROM account_balances 
         WHERE bank_name = :bankName AND account_last4 = :accountLast4
-        ORDER BY timestamp DESC
+        ORDER BY timestamp DESC, id DESC
         LIMIT 1
     """)
     abstract suspend fun getLatestBalance(bankName: String, accountLast4: String): AccountBalanceEntity?
@@ -240,7 +240,7 @@ abstract class AccountBalanceDao {
     @Query("""
         SELECT * FROM account_balances 
         WHERE bank_name = :bankName AND account_last4 = :accountLast4
-        ORDER BY timestamp DESC
+        ORDER BY timestamp DESC, id DESC
         LIMIT 1
     """)
     abstract fun getLatestBalanceFlow(bankName: String, accountLast4: String): Flow<AccountBalanceEntity?>

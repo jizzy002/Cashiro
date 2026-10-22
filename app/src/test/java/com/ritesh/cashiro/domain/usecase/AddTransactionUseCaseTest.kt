@@ -363,6 +363,33 @@ class AddTransactionUseCaseTest {
         assertEquals(BigDecimal("30000"), latest!!.balance)
     }
 
+    @Test
+    fun `latest balance prefers the newest row when timestamps tie`() = runTest {
+        val balanceDao = FakeAccountBalanceDao()
+        val tiedTime = baseTime
+
+        balanceDao.seedBalance(
+            AccountBalanceEntity(
+                bankName = testBank,
+                accountLast4 = testLast4,
+                balance = BigDecimal("25000"),
+                timestamp = tiedTime
+            )
+        )
+        balanceDao.seedBalance(
+            AccountBalanceEntity(
+                bankName = testBank,
+                accountLast4 = testLast4,
+                balance = BigDecimal("30000"),
+                timestamp = tiedTime
+            )
+        )
+
+        val latest = balanceDao.getLatestBalance(testBank, testLast4)
+
+        assertEquals(BigDecimal("30000"), latest!!.balance)
+    }
+
     private fun createUseCase(balanceDao: FakeAccountBalanceDao): AddTransactionUseCase {
         return createUseCaseWithRepo(balanceDao).first
     }
@@ -516,7 +543,9 @@ class AddTransactionUseCaseTest {
 
         override suspend fun getLatestBalance(bankName: String, accountLast4: String): AccountBalanceEntity? {
             val key = Pair(bankName, accountLast4)
-            return balances[key]?.maxByOrNull { it.timestamp }
+            return balances[key]?.maxWithOrNull(
+                compareBy<AccountBalanceEntity>({ it.timestamp }, { it.id })
+            )
         }
 
         override suspend fun getAccountLast4sEndingWith(bankName: String, suffix: String): List<String> = emptyList()
@@ -528,7 +557,7 @@ class AddTransactionUseCaseTest {
             val key = Pair(bankName, accountLast4)
             return balances[key]
                 ?.filter { !it.timestamp.isAfter(timestamp) }
-                ?.maxByOrNull { it.timestamp }
+                ?.maxWithOrNull(compareBy<AccountBalanceEntity>({ it.timestamp }, { it.id }))
         }
         override suspend fun getBalancesAfterWithTransactions(
             bankName: String,

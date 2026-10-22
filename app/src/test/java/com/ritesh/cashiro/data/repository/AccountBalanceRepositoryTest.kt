@@ -496,7 +496,7 @@ class AccountBalanceRepositoryTest {
         override suspend fun getLatestBalance(bankName: String, accountLast4: String): AccountBalanceEntity? {
             return latestBalances[accountKey(bankName, accountLast4)]
                 ?: balances.filter { it.bankName == bankName && it.accountLast4 == accountLast4 }
-                    .maxByOrNull { it.timestamp }
+                    .maxWithOrNull(compareBy<AccountBalanceEntity>({ it.timestamp }, { it.id }))
         }
 
         override suspend fun getLatestBalanceOnOrBefore(
@@ -507,7 +507,7 @@ class AccountBalanceRepositoryTest {
             return balanceAtOrBefore
                 ?: balances.filter {
                     it.bankName == bankName && it.accountLast4 == accountLast4 && !it.timestamp.isAfter(timestamp)
-                }.maxByOrNull { it.timestamp }
+                }.maxWithOrNull(compareBy<AccountBalanceEntity>({ it.timestamp }, { it.id }))
         }
 
         override suspend fun getBalancesAfterWithTransactions(
