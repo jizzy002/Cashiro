@@ -109,6 +109,7 @@ import com.ritesh.cashiro.presentation.ui.components.DateRangePickerDialog
 import com.ritesh.cashiro.presentation.ui.components.DeleteMultipleTransactionsDialog
 import com.ritesh.cashiro.presentation.ui.components.ListItemPosition
 import com.ritesh.cashiro.presentation.ui.components.LoadingCircle
+import com.ritesh.cashiro.presentation.ui.components.ReapplyCategoriesBottomSheet
 import com.ritesh.cashiro.presentation.ui.components.SearchBarBox
 import com.ritesh.cashiro.presentation.ui.components.SectionHeader
 import com.ritesh.cashiro.presentation.ui.components.TransactionItem
@@ -123,6 +124,7 @@ import com.ritesh.cashiro.presentation.ui.icons.Iconax
 import com.ritesh.cashiro.presentation.ui.icons.Menu
 import com.ritesh.cashiro.presentation.ui.icons.ReceiptItem
 import com.ritesh.cashiro.presentation.ui.icons.Search
+import com.ritesh.cashiro.presentation.ui.icons.Sync
 import com.ritesh.cashiro.presentation.ui.theme.Dimensions
 import com.ritesh.cashiro.presentation.ui.theme.Spacing
 import com.ritesh.cashiro.utils.DateRangeUtils
@@ -152,6 +154,7 @@ fun SharedTransitionScope.TransactionsScreen(
     val context = LocalContext.current
     val view = LocalView.current
     val uiState by transactionsViewModel.uiState.collectAsState()
+    val reapplyPreview by transactionsViewModel.reapplyPreview.collectAsState()
     val searchQuery by transactionsViewModel.searchQuery.collectAsState()
     val selectedPeriod by transactionsViewModel.selectedPeriod.collectAsState()
     val categoryFilter by transactionsViewModel.categoryFilter.collectAsState()
@@ -518,6 +521,25 @@ fun SharedTransitionScope.TransactionsScreen(
                                         leadingIcon = {
                                             Icon(
                                                 imageVector = Iconax.Menu,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    )
+                                    HorizontalDivider(
+                                        thickness = 1.5.dp,
+                                        color = MaterialTheme.colorScheme.surface
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.reapply_categories)) },
+                                        onClick = {
+                                            showMainMenu = false
+                                            transactionsViewModel.prepareReapplyAutomaticCategories()
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Iconax.Sync,
                                                 contentDescription = null,
                                                 modifier = Modifier.size(20.dp),
                                                 tint = MaterialTheme.colorScheme.primary
@@ -901,6 +923,16 @@ fun SharedTransitionScope.TransactionsScreen(
             },
             blurEffects = blurEffects,
             hazeState = hazeState
+        )
+    }
+
+    reapplyPreview?.let { preview ->
+        ReapplyCategoriesBottomSheet(
+            preview = preview,
+            onDismiss = { transactionsViewModel.dismissReapplyPreview() },
+            onApply = { selectedChanges ->
+                transactionsViewModel.applyAutomaticCategoryChanges(selectedChanges)
+            }
         )
     }
 }

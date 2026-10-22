@@ -26,7 +26,11 @@ import com.ritesh.cashiro.data.currency.CurrencyConversionService
 import com.ritesh.cashiro.utils.CurrencyUtils
 import com.ritesh.cashiro.utils.DeviceEncryption
 import com.ritesh.cashiro.data.repository.LendBorrowRepository
+import com.ritesh.cashiro.data.repository.MerchantMappingRepository
 import com.ritesh.cashiro.domain.model.PersonInfo
+import com.ritesh.cashiro.domain.service.AutomaticCategoryChange
+import com.ritesh.cashiro.domain.service.AutomaticCategoryPreview
+import com.ritesh.cashiro.domain.service.AutomaticCategoryResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -52,6 +56,7 @@ class TransactionsViewModel @Inject constructor(
     private val currencyRepository: CurrencyRepository,
     private val currencyConversionService: CurrencyConversionService,
     private val lendBorrowRepository: LendBorrowRepository,
+    private val merchantMappingRepository: MerchantMappingRepository,
     private val savedStateHandle: SavedStateHandle,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -112,6 +117,10 @@ class TransactionsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(TransactionsUiState())
     val uiState: StateFlow<TransactionsUiState> = _uiState.asStateFlow()
+
+    // Review prompt for re-applying automatic categories to the filtered list.
+    private val _reapplyPreview = MutableStateFlow<AutomaticCategoryPreview?>(null)
+    val reapplyPreview: StateFlow<AutomaticCategoryPreview?> = _reapplyPreview.asStateFlow()
 
     private val _canLoadData = MutableStateFlow(false)
     
@@ -1042,5 +1051,41 @@ class TransactionsViewModel @Inject constructor(
 
         return "https://github.com/ritesh-kanwar/Cashiro/issues/new?title=$encodedTitle&body=$encodedBody"
     }
-    
+
+    /**
+     * Scans every transaction matching the current filters (not just the
+     * viewport) and builds the review preview. Nothing is written until the
+     * user applies the checked changes.
+     */
+    fun prepareReapplyAutomaticCategories() {
+        viewModelScope.launch {
+            val preview = AutomaticCategoryResolver.computePreview(
+                transactions = _uiState.value.transactions,
+                merchantMappingRepository = merchantMappingRepository
+            )
+            _reapplyPreview.value = preview
+        }
+    }
+
+    /** Applies only the checked changes and clears the stale subcategory when the category changes. */
+    fun applyAutomaticCategoryChanges(changes: List<AutomaticCategoryChange>) {
+        if (changes.isEmpty()) return
+        viewModelScope.launch {
+            changes.forEach { change ->
+                transactionRepository.updateTransaction(
+                    change.transaction.copy(
+                        category = change.newCategory,
+                        subcategory = null,
+                        updatedAt = LocalDateTime.now()
+                    )
+                )
+            }
+            _reapplyPreview.value = null
+        }
+    }
+
+    fun dismissReapplyPreview() {
+        _reapplyPreview.value = null
+    }
+
 }
