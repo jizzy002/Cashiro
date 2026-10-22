@@ -92,6 +92,9 @@ class AccountBalanceRepository @Inject constructor(
 
         if (candidates.size > 1) {
             val alias = normalizeBankAlias(bankName)
+            // An empty alias (stop-word-only name) carries no identity information;
+            // it must never be used to pick between accounts.
+            if (alias.isBlank()) return null
             return candidates.filter { normalizeBankAlias(it.bankName) == alias }.singleOrNull()
         }
 

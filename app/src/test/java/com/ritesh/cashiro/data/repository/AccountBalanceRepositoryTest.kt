@@ -517,6 +517,38 @@ class AccountBalanceRepositoryTest {
     }
 
     @Test
+    fun resolveEntityAccountLeavesAmbiguousWhenAllCandidatesAliasMatch() = runTest {
+        val dao = FakeAccountBalanceDao()
+        dao.seedBalance(balance(1, "Raiffeisen", "1234", BigDecimal("1000"), LocalDateTime.of(2026, 5, 1, 10, 0)))
+        dao.seedBalance(balance(2, "Raiffeisen banka", "1234", BigDecimal("1000"), LocalDateTime.of(2026, 5, 1, 10, 0)))
+        val repository = AccountBalanceRepository(dao, ContextWrapper(null))
+
+        val resolved = repository.resolveEntityAccount(
+            tranEntity("Raiffeisen DD", "1234"),
+            parsed("Raiffeisen DD")
+        )
+
+        assertEquals("Raiffeisen DD", resolved.bankName)
+        assertEquals("1234", resolved.accountNumber)
+    }
+
+    @Test
+    fun resolveEntityAccountDoesNotMatchStopWordOnlyBankName() = runTest {
+        val dao = FakeAccountBalanceDao()
+        dao.seedBalance(balance(1, "Bank", "1234", BigDecimal("1000"), LocalDateTime.of(2026, 5, 1, 10, 0)))
+        dao.seedBalance(balance(2, "Nordea Bank", "1234", BigDecimal("1000"), LocalDateTime.of(2026, 5, 1, 10, 0)))
+        val repository = AccountBalanceRepository(dao, ContextWrapper(null))
+
+        val resolved = repository.resolveEntityAccount(
+            tranEntity("Bank BiH", "1234"),
+            parsed("Bank BiH")
+        )
+
+        assertEquals("Bank BiH", resolved.bankName)
+        assertEquals("1234", resolved.accountNumber)
+    }
+
+    @Test
     fun resolveEntityAccountIgnoresSampleAccounts() = runTest {
         val dao = FakeAccountBalanceDao()
         dao.seedBalance(

@@ -80,8 +80,17 @@ class BalanceUpdateProcessor @Inject constructor(
                         cardRepository.getCard(parsedTransaction.bankName, it)?.cardType
                     } == CardType.CREDIT
 
+            // Card identity keeps the parser's bank name; non-card notifications may
+            // have been auto-matched to a different account identity
+            // (AccountBalanceRepository.resolveEntityAccount), which the entity carries.
+            val balanceBankName = if (isFromCard) {
+                parsedTransaction.bankName
+            } else {
+                entity.bankName ?: parsedTransaction.bankName
+            }
+
             accountBalanceRepository.insertTransactionBalance(
-                bankName = entity.bankName ?: parsedTransaction.bankName,
+                bankName = balanceBankName,
                 accountLast4 = targetAccountLast4,
                 amount = parsedTransaction.amount,
                 transactionType = parsedTransaction.type.toEntityType(),

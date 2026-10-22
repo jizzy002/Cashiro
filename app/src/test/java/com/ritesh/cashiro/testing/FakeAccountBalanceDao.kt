@@ -53,7 +53,7 @@ internal class FakeAccountBalanceDao(
         }
     }
 
-            override suspend fun getBalanceByTransactionId(transactionId: Long): AccountBalanceEntity? {
+    override suspend fun getBalanceByTransactionId(transactionId: Long): AccountBalanceEntity? {
         return balances.find { it.transactionId == transactionId }
     }
 

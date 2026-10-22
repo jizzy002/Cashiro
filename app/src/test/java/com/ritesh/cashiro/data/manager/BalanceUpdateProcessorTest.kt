@@ -70,11 +70,64 @@ class BalanceUpdateProcessorTest {
         assertEquals(BigDecimal("950"), inserted.balance)
     }
 
+    @Test
+    fun processKeepsParserBankNameForCardBalanceSnapshot() = runTest {
+        val timestamp = LocalDateTime.of(2026, 5, 23, 20, 35)
+        val dao = FakeAccountBalanceDao()
+        val cardDao = FakeCardDao()
+        val processor = BalanceUpdateProcessor(
+            cardRepository = CardRepository(cardDao),
+            accountBalanceRepository = AccountBalanceRepository(dao, ContextWrapper(null))
+        )
+
+        processor.process(
+            parsedTransaction = ParsedTransaction(
+                amount = BigDecimal("50"),
+                type = com.ritesh.parser.core.TransactionType.CREDIT,
+                merchant = "Merchant",
+                reference = null,
+                accountLast4 = "4321",
+                balance = null,
+                smsBody = "",
+                sender = "RaiffeisenBiH",
+                timestamp = 1748020535000L,
+                bankName = "Card Bank",
+                currency = "BAM",
+                isFromCard = true
+            ),
+            entity = TransactionEntity(
+                id = 7,
+                amount = BigDecimal("50"),
+                merchantName = "Merchant",
+                category = "Shopping",
+                transactionType = TransactionType.EXPENSE,
+                dateTime = timestamp,
+                transactionHash = "card-hash",
+                currency = "BAM",
+                bankName = "Some Other Bank",
+                accountNumber = null
+            ),
+            rowId = 7L
+        )
+
+        assertEquals(1, dao.insertedBalances.size)
+        assertEquals("Card Bank", dao.insertedBalances.single().bankName)
+    }
+
     private class FakeCardDao : CardDao {
-        override suspend fun insertCard(card: CardEntity): Long = 0
+        val cards = mutableListOf<CardEntity>()
+        private var nextId = 1L
+
+        override suspend fun insertCard(card: CardEntity): Long {
+            val id = nextId++
+            cards.add(card.copy(id = id))
+            return id
+        }
+
         override suspend fun updateCard(card: CardEntity) = Unit
         override suspend fun deleteCard(card: CardEntity) = Unit
-        override suspend fun getCard(bankName: String, cardLast4: String): CardEntity? = null
+        override suspend fun getCard(bankName: String, cardLast4: String): CardEntity? =
+            cards.find { it.bankName == bankName && it.cardLast4 == cardLast4 }
         override suspend fun getCardById(cardId: Long): CardEntity? = null
         override suspend fun getCardsByLast4(cardLast4: String): List<CardEntity> = emptyList()
         override suspend fun getCardsForAccount(accountLast4: String): List<CardEntity> = emptyList()
