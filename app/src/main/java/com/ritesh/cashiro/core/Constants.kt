@@ -1,6 +1,26 @@
 package com.ritesh.cashiro.core
 
 /**
+ * One downloadable on-device chat model.
+ *
+ * Sizes are the exact Hugging Face artifact sizes in bytes; completion checks
+ * allow a 1 % shortfall for download-manager metadata.
+ */
+data class ChatModelInfo(
+    val id: String,
+    val displayName: String,
+    val tierLabel: String,
+    val url: String,
+    val fileName: String,
+    val sizeBytes: Long
+) {
+    /** Decimal megabytes, as shown in download UIs. */
+    val sizeMb: Long get() = sizeBytes / 1_000_000
+
+    val requiredSpaceBytes: Long get() = (sizeBytes * 1.2).toLong()
+}
+
+/**
  * Application-wide constants to avoid hardcoded values
  */
 object Constants {
@@ -68,12 +88,48 @@ object Constants {
      * LLM Model Configuration
      */
     object ModelDownload {
-        const val MODEL_URL = "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.task?download=true"
-    
-        const val MODEL_FILE_NAME = "qwen2.5-1.5b-instruct.task"
-        const val MODEL_SIZE_MB = 1638L // ~1.6 GB
-        const val MODEL_SIZE_BYTES = 1_500_000_000L // 1.5 GB minimum (handles decimal/binary variance)
-        const val REQUIRED_SPACE_BYTES = 1_800_000_000L // 1.8 GB (1.1x model size for safety)
+        const val DEFAULT_MODEL_ID = "qwen2.5-1.5b"
+
+        /** Lower-case alias used by UI/repository code. */
+        val defaultModelId: String get() = DEFAULT_MODEL_ID
+
+        val models: List<ChatModelInfo> = listOf(
+            ChatModelInfo(
+                id = DEFAULT_MODEL_ID,
+                displayName = "Qwen2.5 1.5B",
+                tierLabel = "Best quality",
+                url = "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.task?download=true",
+                fileName = "qwen2.5-1.5b-instruct.task",
+                sizeBytes = 1_598_556_720L
+            ),
+            ChatModelInfo(
+                id = "qwen3-0.6b",
+                displayName = "Qwen3 0.6B",
+                tierLabel = "Fast · smaller",
+                url = "https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/qwen3_0_6b_mixed_int4.litertlm?download=true",
+                fileName = "qwen3-0.6b-mixed-int4.litertlm",
+                sizeBytes = 497_516_544L
+            ),
+            ChatModelInfo(
+                id = "gemma-3-270m",
+                displayName = "Gemma 3 270M",
+                tierLabel = "Tiny · fastest",
+                url = "https://huggingface.co/litert-community/gemma-3-270m-it/resolve/main/gemma3-270m-it-q8.task?download=true",
+                fileName = "gemma3-270m-it-q8.task",
+                sizeBytes = 303_950_933L
+            )
+        )
+
+        /** Unknown ids fall back to the default, so a stale preference is harmless. */
+        fun model(id: String?): ChatModelInfo =
+            models.firstOrNull { it.id == id } ?: models.first { it.id == DEFAULT_MODEL_ID }
+
+        // Legacy single-model constants kept for existing call sites.
+        val MODEL_URL: String = model(DEFAULT_MODEL_ID).url
+        val MODEL_FILE_NAME: String = model(DEFAULT_MODEL_ID).fileName
+        val MODEL_SIZE_MB: Long = model(DEFAULT_MODEL_ID).sizeMb
+        val MODEL_SIZE_BYTES: Long = model(DEFAULT_MODEL_ID).sizeBytes
+        val REQUIRED_SPACE_BYTES: Long = model(DEFAULT_MODEL_ID).requiredSpaceBytes
     }
 
     /**
