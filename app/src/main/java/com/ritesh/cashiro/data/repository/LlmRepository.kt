@@ -28,6 +28,9 @@ class LlmRepository @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val currencyRepository: CurrencyRepository
 ) {
+    @Volatile
+    private var loadedModelPath: String? = null
+
     fun getMessagesForSession(sessionId: String): Flow<List<ChatMessage>> = chatDao.getMessagesForSession(sessionId)
     
     fun getAllMessagesIncludingSystemForSession(sessionId: String): Flow<List<ChatMessage>> = chatDao.getAllMessagesIncludingSystemForSession(sessionId)
@@ -43,20 +46,29 @@ class LlmRepository @Inject constructor(
         )
         chatDao.insertMessage(userChatMessage)
         
-        // Initialize LLM if needed
-        if (!llmService.isInitialized()) {
+        // Initialize or swap to the selected model if needed
+        val modelFile = modelRepository.getModelFile()
+        if (ModelLoadPolicy.needsInitialization(
+                isInitialized = llmService.isInitialized(),
+                loadedPath = loadedModelPath,
+                selectedPath = modelFile.absolutePath
+            )
+        ) {
             if (!com.ritesh.cashiro.core.Constants.Device.is64Bit) {
                 return Result.failure(Exception("AI features are not supported on 32-bit devices."))
             }
-            val modelFile = modelRepository.getModelFile()
             if (!modelFile.exists()) {
                 return Result.failure(Exception("Model not downloaded"))
             }
-            
+            if (llmService.isInitialized()) {
+                llmService.reset()
+            }
+
             val initResult = llmService.initialize(modelFile.absolutePath)
             if (initResult.isFailure) {
                 return Result.failure(initResult.exceptionOrNull() ?: Exception("Failed to initialize LLM"))
             }
+            loadedModelPath = modelFile.absolutePath
         }
         
         // Generate response
@@ -90,19 +102,28 @@ class LlmRepository @Inject constructor(
             throw Exception("Model is currently downloading. Please wait for download to complete.")
         }
 
-        // Initialize LLM if needed
-        if (!llmService.isInitialized()) {
+        // Initialize or swap to the selected model if needed
+        val modelFile = modelRepository.getModelFile()
+        if (ModelLoadPolicy.needsInitialization(
+                isInitialized = llmService.isInitialized(),
+                loadedPath = loadedModelPath,
+                selectedPath = modelFile.absolutePath
+            )
+        ) {
             if (!com.ritesh.cashiro.core.Constants.Device.is64Bit) {
                 throw Exception("AI features are not supported on 32-bit devices.")
             }
-            val modelFile = modelRepository.getModelFile()
             if (!modelFile.exists()) {
                 throw Exception("Model not downloaded. Please download from Settings.")
+            }
+            if (llmService.isInitialized()) {
+                llmService.reset()
             }
             val initResult = llmService.initialize(modelFile.absolutePath)
             if (initResult.isFailure) {
                 throw initResult.exceptionOrNull() ?: Exception("Failed to initialize LLM")
             }
+            loadedModelPath = modelFile.absolutePath
         }
 
         // Create the DB session record for new chats
