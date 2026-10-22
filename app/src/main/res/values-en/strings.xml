@@ -26,8 +26,8 @@
     <string name="import_data">Import Data</string>
     <string name="import_data_sub">Restore data from backup</string>
     <string name="import_pdf_statement">Import PDF Statement</string>
-    <string name="import_pdf_statement_sub">Scan GPay or PhonePe PDF statements</string>
-    <string name="pdf_support_warning_title">Only PDFs from GPay and PhonePe are currently supported.</string>
+    <string name="import_pdf_statement_sub">Import GPay, PhonePe or Raiffeisen PDF statements</string>
+    <string name="pdf_support_warning_title">Only PDFs from GPay, PhonePe and Raiffeisen Bank BiH are currently supported.</string>
     <string name="pdf_support_warning_sub">Balance chart won\'t add any bank balance information from PDFs as it isn\'t available in the statement data.</string>
     <string name="immediately">Immediately</string>
     <string name="one_minute">1 minute</string>

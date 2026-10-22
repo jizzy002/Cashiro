@@ -54,7 +54,7 @@ For Android users worldwide who want a comprehensive financial tracking — auto
 ## Why Cashiro
 
 - **🤖 Smart SMS Parsing** - Automatically extracts transaction details from 40+ banks SMS across 5 countries
-- **🗂️ Smart PDF Parsing** - Automatically extracts transaction details from GPay and PhonePe PDF UPI Statements.
+- **🗂️ Smart PDF Parsing** - Automatically extracts transaction details from GPay, PhonePe and Raiffeisen Bank BiH PDF statements.
 - **💰 Smart Budgeting** - Set and track monthly budgets with visual progress indicators
 - **👛 Cash Wallet** - Dedicated default wallet for tracking cash expenses
 - **🏦 Advance Account Management** - Create Custom account for manual tracking

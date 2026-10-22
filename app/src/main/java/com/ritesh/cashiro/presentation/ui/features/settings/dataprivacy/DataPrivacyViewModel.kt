@@ -20,6 +20,7 @@ import com.ritesh.cashiro.data.database.entity.TransactionEntity
 import com.ritesh.cashiro.data.database.entity.TransactionType
 import com.ritesh.cashiro.data.parser.pdf.GPayPdfParser
 import com.ritesh.cashiro.data.parser.pdf.PhonePePdfParser
+import com.ritesh.cashiro.data.parser.pdf.RaiffeisenBiHEnglishStatementParser
 import com.ritesh.cashiro.data.parser.pdf.RaiffeisenBiHStatementParser
 import com.ritesh.cashiro.data.preferences.UserPreferencesRepository
 import com.ritesh.cashiro.data.repository.AccountBalanceRepository
@@ -31,12 +32,14 @@ import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.security.MessageDigest
 import java.time.Instant
@@ -232,36 +235,64 @@ class DataPrivacyViewModel @Inject constructor(
     
     //Parse the PDF and emit analysis result
     fun analyzePdfStatement(uri: Uri) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 _uiState.update { it.copy(isPdfProcessing = true, pdfAnalysisResult = null, pdfProcessingError = null) }
 
-                PDFBoxResourceLoader.init(context)
-                val text = context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    PDDocument.load(inputStream).use { document ->
-                        PDFTextStripper().getText(document)
-                    }
-                } ?: throw Exception("Failed to open PDF")
-
+                val pdfBytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    ?: throw Exception("Failed to open PDF")
+                val text = extractPdfText(pdfBytes, sortByPosition = false)
                 Log.d("DataPrivacyViewModel", "Extracted statement text: ${text.length} chars")
 
-                val parsers = listOf(GPayPdfParser(), PhonePePdfParser(), RaiffeisenBiHStatementParser())
+                val parsers = listOf(
+                    GPayPdfParser(),
+                    PhonePePdfParser(),
+                    RaiffeisenBiHStatementParser(),
+                    RaiffeisenBiHEnglishStatementParser()
+                )
                 var parsedTransactions = emptyList<com.ritesh.parser.core.ParsedTransaction>()
                 var matchedParser: com.ritesh.cashiro.data.parser.pdf.PdfStatementParser? = null
+                var lastParseError: Exception? = null
 
-                for (parser in parsers) {
-                    if (parser.canHandle(text)) {
-                        val result = parser.parse(text)
+                fun tryParsers(candidateText: String): Boolean {
+                    for (parser in parsers) {
+                        if (!parser.canHandle(candidateText)) continue
+                        val result = try {
+                            parser.parse(candidateText)
+                        } catch (e: Exception) {
+                            lastParseError = e
+                            continue
+                        }
                         if (result.isNotEmpty()) {
                             parsedTransactions = result
                             matchedParser = parser
-                            break
+                            return true
                         }
+                    }
+                    return false
+                }
+
+                if (!tryParsers(text)) {
+                    // Some PDFs expose table columns in content-stream order rather
+                    // than row order. Retry once with position-sorted text before
+                    // giving up; the English Raiffeisen statement needs this on
+                    // devices where PDFBox does not sort columns by itself.
+                    val sortedText = extractPdfText(pdfBytes, sortByPosition = true)
+                    if (sortedText != text) {
+                        Log.d(
+                            "DataPrivacyViewModel",
+                            "Retrying PDF extraction with position-sorted text: ${sortedText.length} chars"
+                        )
+                        tryParsers(sortedText)
                     }
                 }
 
                 if (parsedTransactions.isEmpty()) {
-                    throw Exception("No transactions found in this PDF. Supported statements: GPay, PhonePe and Raiffeisen Bank BiH.")
+                    lastParseError?.let { throw it }
+                    throw Exception(
+                        "No transactions found in this PDF. Supported statements: " +
+                            "GPay, PhonePe and Raiffeisen Bank BiH (IZVOD or English Account Statement)."
+                    )
                 }
 
                 val duplicateWindow = PdfImportSupport.duplicateWindow(
@@ -313,12 +344,29 @@ class DataPrivacyViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                Log.e("DataPrivacyViewModel", "Error analyzing PDF", e)
-                _uiState.update { it.copy(isPdfProcessing = false, pdfProcessingError = e.message) }
+                // Never log or surface parser exceptions: their messages can
+                // contain statement rows, merchant names or account data.
+                Log.e("DataPrivacyViewModel", "Error analyzing PDF (${e::class.java.simpleName})")
+                _uiState.update {
+                    it.copy(
+                        isPdfProcessing = false,
+                        pdfProcessingError = "This PDF could not be read. " +
+                            "It may be incomplete or use an unsupported layout."
+                    )
+                }
             }
         }
     }
 
+
+    private fun extractPdfText(pdfBytes: ByteArray, sortByPosition: Boolean): String {
+        PDFBoxResourceLoader.init(context)
+        return PDDocument.load(ByteArrayInputStream(pdfBytes)).use { document ->
+            PDFTextStripper().apply {
+                this.sortByPosition = sortByPosition
+            }.getText(document)
+        }
+    }
 
     fun confirmPdfImport(
         accountDecisions: Map<String, AccountImportDecision>,
