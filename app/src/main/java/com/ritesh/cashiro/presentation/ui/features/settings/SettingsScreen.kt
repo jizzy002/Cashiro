@@ -15,6 +15,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,10 +43,13 @@ import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material.icons.rounded.Webhook
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -69,6 +73,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.ritesh.cashiro.R
+import com.ritesh.cashiro.core.ChatModelInfo
 import com.ritesh.cashiro.core.Constants
 import com.ritesh.cashiro.presentation.effects.overScrollVertical
 import com.ritesh.cashiro.presentation.ui.components.CustomTitleTopAppBar
@@ -134,11 +139,13 @@ fun SettingsScreen(
     val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val downloadState = uiState.downloadStatus
     val downloadProgress = uiState.downloadProgress
+    val selectedModel = Constants.ModelDownload.model(uiState.selectedModelId)
     val totalTransactionsCount by settingsViewModel.totalTransactions.collectAsStateWithLifecycle()
     val googleDriveEmail by settingsViewModel.googleDriveEmail.collectAsStateWithLifecycle()
     val userPreferences by settingsViewModel.userPreferences.collectAsStateWithLifecycle(initialValue = null)
     val isWebhookModeEnabled = userPreferences?.isWebhookModeEnabled == true
     var showDeleteModelDialog by remember { mutableStateOf(false) }
+    var showModelPicker by remember { mutableStateOf(false) }
     var showLanguageBottomSheet by remember { mutableStateOf(false) }
     val currentLanguageCode = remember(androidx.compose.ui.platform.LocalConfiguration.current) {
         val locales = AppCompatDelegate.getApplicationLocales()
@@ -800,10 +807,10 @@ fun SettingsScreen(
                             supporting = {
                                 Text(
                                     text = when (downloadState) {
-                                        DownloadState.NOT_DOWNLOADED -> stringResource(R.string.ai_chat_subtitle_not_downloaded, Constants.ModelDownload.MODEL_SIZE_MB)
+                                        DownloadState.NOT_DOWNLOADED -> stringResource(R.string.ai_chat_subtitle_not_downloaded, selectedModel.sizeMb)
                                         DownloadState.DOWNLOADING -> stringResource(R.string.ai_chat_subtitle_downloading, downloadProgress)
                                         DownloadState.PAUSED -> stringResource(R.string.ai_chat_subtitle_paused)
-                                        DownloadState.COMPLETED -> stringResource(R.string.ai_chat_subtitle_completed)
+                                        DownloadState.COMPLETED -> stringResource(R.string.ai_chat_subtitle_completed, selectedModel.displayName)
                                         DownloadState.FAILED -> stringResource(R.string.ai_chat_subtitle_failed)
                                         DownloadState.ERROR_INSUFFICIENT_SPACE -> stringResource(R.string.ai_chat_subtitle_insufficient_space)
                                     },
@@ -884,6 +891,53 @@ fun SettingsScreen(
                                 }
                             },
                             shape = ListItemPosition.Top.toShape(),
+                            padding = PaddingValues(0.dp)
+                        )
+                        ListItem(
+                            headline = {
+                                Text(
+                                    text = stringResource(R.string.ai_model_title),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            },
+                            supporting = {
+                                Text(
+                                    text = stringResource(
+                                        R.string.ai_model_subtitle,
+                                        selectedModel.displayName,
+                                        selectedModel.sizeMb
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            leading = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(
+                                            color = purple_light,
+                                            shape = CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = purple_dark
+                                    )
+                                }
+                            },
+                            trailing = {
+                                Icon(
+                                    Icons.Rounded.ChevronRight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            onClick = { showModelPicker = true },
+                            shape = ListItemPosition.Middle.toShape(),
                             padding = PaddingValues(0.dp)
                         )
                     }
@@ -1071,6 +1125,20 @@ fun SettingsScreen(
             }
         }
 
+        if (showModelPicker) {
+            ModelPickerDialog(
+                models = uiState.availableModels,
+                selectedModelId = uiState.selectedModelId,
+                downloadedModelIds = uiState.downloadedModelIds,
+                selectionEnabled = downloadState != DownloadState.DOWNLOADING,
+                onSelect = {
+                    settingsViewModel.selectModel(it)
+                    showModelPicker = false
+                },
+                onDismiss = { showModelPicker = false }
+            )
+        }
+
         if (showDeleteModelDialog) {
             DeleteAIModelDialog(
                 onDismiss = { showDeleteModelDialog = false },
@@ -1118,4 +1186,75 @@ fun LanguageTrailing(
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+@Composable
+private fun ModelPickerDialog(
+    models: List<ChatModelInfo>,
+    selectedModelId: String,
+    downloadedModelIds: Set<String>,
+    selectionEnabled: Boolean,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.ai_model_picker_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                models.forEach { model ->
+                    val status = stringResource(
+                        if (model.id in downloadedModelIds) {
+                            R.string.ai_model_downloaded
+                        } else {
+                            R.string.ai_model_not_downloaded
+                        }
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = selectionEnabled) { onSelect(model.id) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = model.id == selectedModelId,
+                            onClick = { onSelect(model.id) },
+                            enabled = selectionEnabled
+                        )
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 4.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = model.displayName,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                if (model.id == Constants.ModelDownload.defaultModelId) {
+                                    Text(
+                                        text = " · ${stringResource(R.string.ai_model_default)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "${model.tierLabel} · ${model.sizeMb} MB · $status",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }

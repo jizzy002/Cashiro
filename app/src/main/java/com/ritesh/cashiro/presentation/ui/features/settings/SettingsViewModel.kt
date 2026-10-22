@@ -24,6 +24,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import com.ritesh.cashiro.data.repository.ModelRepository
 import com.ritesh.cashiro.data.repository.ModelState
+import com.ritesh.cashiro.domain.service.LlmService
 import com.ritesh.cashiro.data.repository.SubscriptionRepository
 import com.ritesh.cashiro.data.repository.UnrecognizedSmsRepository
 import com.ritesh.cashiro.data.cloud.security.CloudCredentialStore
@@ -74,6 +75,7 @@ import java.util.UUID
 class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val modelRepository: ModelRepository,
+    private val llmService: LlmService,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val unrecognizedSmsRepository: UnrecognizedSmsRepository,
     private val transactionRepository: TransactionRepository,
@@ -151,7 +153,36 @@ class SettingsViewModel @Inject constructor(
                     ModelState.LOADING -> DownloadState.COMPLETED
                     ModelState.ERROR -> DownloadState.FAILED
                 }
-                _uiState.update { it.copy(downloadStatus = downloadStatus) }
+                _uiState.update { current ->
+                    current.copy(
+                        downloadStatus = downloadStatus,
+                        downloadedModelIds = currentDownloadedModelIds(),
+                        totalMB = if (downloadStatus == DownloadState.COMPLETED) {
+                            Constants.ModelDownload.model(current.selectedModelId).sizeMb
+                        } else {
+                            current.totalMB
+                        },
+                        downloadedMB = if (downloadStatus == DownloadState.COMPLETED) {
+                            Constants.ModelDownload.model(current.selectedModelId).sizeMb
+                        } else {
+                            current.downloadedMB
+                        }
+                    )
+                }
+            }
+        }
+
+        // Follow the persisted selection so the card always describes the right model.
+        viewModelScope.launch {
+            modelRepository.selectedModelId.collect { id ->
+                _uiState.update {
+                    it.copy(
+                        selectedModelId = id,
+                        availableModels = Constants.ModelDownload.models,
+                        downloadedModelIds = currentDownloadedModelIds()
+                    )
+                }
+                modelRepository.checkModelState()
             }
         }
         
@@ -253,72 +284,94 @@ class SettingsViewModel @Inject constructor(
     }
 
 
+    private fun currentDownloadedModelIds(): Set<String> =
+        ModelSelectionRules.downloadedIds(Constants.ModelDownload.models) { model ->
+            modelRepository.isModelDownloaded(model.id)
+        }
+
     private fun checkModelFile() {
-        val modelFile = File(
-            context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
-            Constants.ModelDownload.MODEL_FILE_NAME
-        )
-        Log.d("SettingsViewModel", "Checking model file at: ${modelFile.absolutePath}")
+        val model = Constants.ModelDownload.model(_uiState.value.selectedModelId)
+        val modelFile = modelRepository.getModelFile(model.id)
         Log.d(
             "SettingsViewModel",
-            "Model file exists: ${modelFile.exists()}, size: ${modelFile.length()}, expected: ${Constants.ModelDownload.MODEL_SIZE_BYTES}"
+            "Checking ${model.id} at ${modelFile.absolutePath}: exists=${modelFile.exists()}, " +
+                "size=${modelFile.length()}, expected=${model.sizeBytes}"
         )
 
-        // Check against expected size to ensure it's complete
-        // Allow 10% variance in file size as download sizes can vary slightly
-        val minSize = (Constants.ModelDownload.MODEL_SIZE_BYTES * 0.90).toLong()
-        val maxSize = (Constants.ModelDownload.MODEL_SIZE_BYTES * 1.20).toLong()
+        when {
+            modelRepository.isModelDownloaded(model.id) -> {
+                _uiState.update {
+                    it.copy(
+                        downloadStatus = DownloadState.COMPLETED,
+                        totalMB = modelFile.length() / (1024 * 1024),
+                        downloadedMB = modelFile.length() / (1024 * 1024),
+                        downloadProgress = 100,
+                        downloadedModelIds = currentDownloadedModelIds()
+                    )
+                }
+                modelRepository.updateModelState(ModelState.READY)
+            }
+            modelFile.exists() -> {
+                Log.d("SettingsViewModel", "Partial model file found (${modelFile.length()} bytes), deleting")
+                modelFile.delete()
+                _uiState.update {
+                    it.copy(
+                        downloadStatus = DownloadState.NOT_DOWNLOADED,
+                        downloadProgress = 0,
+                        downloadedMB = 0,
+                        totalMB = 0,
+                        downloadedModelIds = currentDownloadedModelIds()
+                    )
+                }
+            }
+            else -> {
+                Log.d("SettingsViewModel", "Model ${model.id} not found")
+                _uiState.update {
+                    it.copy(
+                        downloadStatus = DownloadState.NOT_DOWNLOADED,
+                        downloadedModelIds = currentDownloadedModelIds()
+                    )
+                }
+            }
+        }
+    }
 
-        if (modelFile.exists() && modelFile.length() in minSize..maxSize) {
+    fun selectModel(modelId: String) {
+        val current = _uiState.value
+        if (!ModelSelectionRules.canSelect(
+                currentId = current.selectedModelId,
+                targetId = modelId,
+                isDownloading = current.downloadStatus == DownloadState.DOWNLOADING
+            )
+        ) {
+            return
+        }
+
+        viewModelScope.launch {
+            // Unload the old engine so the next chat response initializes the
+            // newly selected model file.
+            llmService.reset()
+            modelRepository.selectModel(modelId)
             _uiState.update {
                 it.copy(
-                    downloadStatus = DownloadState.COMPLETED,
-                    totalMB = modelFile.length() / (1024 * 1024),
-                    downloadedMB = modelFile.length() / (1024 * 1024),
-                    downloadProgress = 100
+                    selectedModelId = modelId,
+                    downloadStatus = DownloadState.NOT_DOWNLOADED,
+                    downloadProgress = 0,
+                    downloadedMB = 0,
+                    totalMB = 0
                 )
             }
-            // Update model repository state
-            Log.d(
-                "SettingsViewModel",
-                "Model complete (${modelFile.length()} bytes), updating repository state to READY"
-            )
-            modelRepository.updateModelState(ModelState.READY)
-        } else if (modelFile.exists() && modelFile.length() > maxSize) {
-            // File is too large, but might still be valid - mark as complete
-            _uiState.update {
-                it.copy(
-                    downloadStatus = DownloadState.COMPLETED,
-                    totalMB = modelFile.length() / (1024 * 1024),
-                    downloadedMB = modelFile.length() / (1024 * 1024),
-                    downloadProgress = 100
-                )
-            }
-            Log.d(
-                "SettingsViewModel",
-                "Model file larger than expected (${modelFile.length()} bytes), but marking as complete"
-            )
-            modelRepository.updateModelState(ModelState.READY)
-        } else if (modelFile.exists()) {
-            // Partial file exists, delete it
-            Log.d(
-                "SettingsViewModel",
-                "Partial model file found (${modelFile.length()} bytes), deleting"
-            )
-            modelFile.delete()
-            _uiState.update { it.copy(downloadStatus = DownloadState.NOT_DOWNLOADED) }
-        } else {
-            Log.d("SettingsViewModel", "Model not found")
-            _uiState.update { it.copy(downloadStatus = DownloadState.NOT_DOWNLOADED) }
         }
     }
 
     fun startModelDownload() {
         viewModelScope.launch {
+            val model = Constants.ModelDownload.model(_uiState.value.selectedModelId)
+
             // Guard: if model file is already fully downloaded, do NOT start a new download
             // (DownloadManager would delete the existing file before writing the new one)
-            if (modelRepository.isModelDownloaded()) {
-                Log.d("SettingsViewModel", "Model already downloaded — skipping download")
+            if (modelRepository.isModelDownloaded(model.id)) {
+                Log.d("SettingsViewModel", "Model ${model.id} already downloaded — skipping download")
                 _uiState.update {
                     it.copy(
                         downloadStatus = DownloadState.COMPLETED,
@@ -364,20 +417,20 @@ class SettingsViewModel @Inject constructor(
 
             // Check storage space
             val availableSpace = context.filesDir.usableSpace
-            if (availableSpace < Constants.ModelDownload.REQUIRED_SPACE_BYTES) {
+            if (availableSpace < model.requiredSpaceBytes) {
                 _uiState.update { it.copy(downloadStatus = DownloadState.ERROR_INSUFFICIENT_SPACE) }
                 return@launch
             }
 
-            // Create download request
-            val request = DownloadManager.Request(Constants.ModelDownload.MODEL_URL.toUri())
-                .setTitle("Qwen 2.5 Chat Model")
-                .setDescription("Downloading AI chat assistant for Cashiro")
+            // Create download request for the selected catalog entry
+            val request = DownloadManager.Request(model.url.toUri())
+                .setTitle("${model.displayName} Chat Model")
+                .setDescription("Downloading ${model.displayName} for Cashiro")
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalFilesDir(
                     context,
                     Environment.DIRECTORY_DOWNLOADS,
-                    Constants.ModelDownload.MODEL_FILE_NAME
+                    model.fileName
                 )
                 .setAllowedOverMetered(true) // Allow mobile data downloads
                 .setAllowedOverRoaming(false)
@@ -399,22 +452,25 @@ class SettingsViewModel @Inject constructor(
 
     fun cancelDownload() {
         viewModelScope.launch {
-            currentDownloadId?.let { it ->
-                downloadManager.remove(it)
-                _uiState.update { it.copy(downloadStatus = DownloadState.NOT_DOWNLOADED) }
-                _uiState.update { it.copy(downloadProgress = 0) }
-                _uiState.update { it.copy(downloadedMB = 0) }
-                _uiState.update { it.copy(totalMB = 0) }
+            val downloadId = currentDownloadId ?: userPreferencesRepository.getActiveDownloadId()
+            if (downloadId != null) {
+                downloadManager.remove(downloadId)
+                currentDownloadId = null
+                _uiState.update {
+                    it.copy(
+                        downloadStatus = DownloadState.NOT_DOWNLOADED,
+                        downloadProgress = 0,
+                        downloadedMB = 0,
+                        totalMB = 0
+                    )
+                }
 
                 // Clear saved download ID
                 userPreferencesRepository.clearActiveDownloadId()
 
-                // Delete partial file
-                val modelFile = File(
-                    context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
-                    Constants.ModelDownload.MODEL_FILE_NAME
-                )
+                // Delete the partial file for the selected model only
                 modelRepository.deleteModel()
+                _uiState.update { it.copy(downloadedModelIds = currentDownloadedModelIds()) }
                 Log.d("SettingsViewModel", "Download cancelled and cleaned up")
             }
         }
@@ -423,10 +479,15 @@ class SettingsViewModel @Inject constructor(
     fun deleteModel() {
         viewModelScope.launch {
             if (modelRepository.deleteModel()) {
-                _uiState.update { it.copy(downloadStatus = DownloadState.NOT_DOWNLOADED) }
-                _uiState.update { it.copy(downloadProgress = 0) }
-                _uiState.update { it.copy(downloadedMB = 0) }
-                _uiState.update { it.copy(totalMB = 0) }
+                _uiState.update {
+                    it.copy(
+                        downloadStatus = DownloadState.NOT_DOWNLOADED,
+                        downloadProgress = 0,
+                        downloadedMB = 0,
+                        totalMB = 0,
+                        downloadedModelIds = currentDownloadedModelIds()
+                    )
+                }
                 // Clear any saved download ID
                 userPreferencesRepository.clearActiveDownloadId()
                 Log.d("SettingsViewModel", "Model deleted")
