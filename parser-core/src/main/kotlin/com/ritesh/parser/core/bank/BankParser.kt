@@ -30,6 +30,12 @@ abstract class BankParser {
      */
     open fun getCurrency(): String = "INR"
 
+    /**
+     * Returns the FX conversion rule for this bank, or null when transactions
+     * are already in their settlement currency.
+     */
+    open fun getFxPolicy(): FxPolicy? = null
+
     companion object {
         private const val MAX_SMS_LENGTH = 5000
 
