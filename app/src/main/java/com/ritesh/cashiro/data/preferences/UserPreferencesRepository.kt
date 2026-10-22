@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.map
 import com.ritesh.cashiro.data.webhook.WebhookScheduledTime
 import com.ritesh.cashiro.data.webhook.WebhookSettings
 import com.ritesh.cashiro.data.webhook.WebhookSyncMode
+import com.ritesh.cashiro.core.Constants
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.ritesh.cashiro.data.model.CustomCurrency
@@ -38,6 +39,7 @@ constructor(@ApplicationContext private val context: Context) {
         val SYSTEM_PROMPT = stringPreferencesKey("system_prompt")
         val HAS_SHOWN_SCAN_TUTORIAL = booleanPreferencesKey("has_shown_scan_tutorial")
         val ACTIVE_DOWNLOAD_ID = longPreferencesKey("active_download_id")
+        val SELECTED_MODEL_ID = stringPreferencesKey("selected_model_id")
         val SMS_SCAN_MONTHS = intPreferencesKey("sms_scan_months")
         val SMS_SCAN_ALL_TIME = booleanPreferencesKey("sms_scan_all_time")
         val LAST_SCAN_TIMESTAMP = longPreferencesKey("last_scan_timestamp")
@@ -435,6 +437,19 @@ constructor(@ApplicationContext private val context: Context) {
     suspend fun clearActiveDownloadId() {
         context.dataStore.edit { preferences ->
             preferences.remove(PreferencesKeys.ACTIVE_DOWNLOAD_ID)
+        }
+    }
+
+    val selectedModelId: Flow<String> =
+            context.dataStore.data.map { preferences ->
+                preferences[PreferencesKeys.SELECTED_MODEL_ID]
+                        ?: Constants.ModelDownload.defaultModelId
+            }
+
+    suspend fun setSelectedModelId(modelId: String) {
+        val resolved = Constants.ModelDownload.model(modelId).id
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SELECTED_MODEL_ID] = resolved
         }
     }
 

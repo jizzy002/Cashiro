@@ -13,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -30,33 +31,60 @@ class ModelRepository @Inject constructor(
     private var monitorJob: kotlinx.coroutines.Job? = null
     private val _modelState = MutableStateFlow(ModelState.LOADING)
     val modelState: Flow<ModelState> = _modelState.asStateFlow()
-    
+
+    @Volatile
+    private var currentModelId: String = Constants.ModelDownload.defaultModelId
+
+    private val _selectedModelId = MutableStateFlow(Constants.ModelDownload.defaultModelId)
+    val selectedModelId: StateFlow<String> = _selectedModelId.asStateFlow()
+
     init {
+        // Keep the synchronous file lookups in step with the persisted selection.
+        repositoryScope.launch {
+            userPreferencesRepository.selectedModelId.collect { id ->
+                val resolved = Constants.ModelDownload.model(id).id
+                currentModelId = resolved
+                _selectedModelId.value = resolved
+                checkModelState()
+            }
+        }
         checkModelState()
     }
 
     private val _downloadProgress = MutableStateFlow(0)
     val downloadProgress: Flow<Int> = _downloadProgress.asStateFlow()
-    
-    fun getModelFile(): File {
-        val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), Constants.ModelDownload.MODEL_FILE_NAME)
-        Log.d("ModelRepository", "Model file path: ${file.absolutePath}")
+
+    private fun modelsDirectory(): File =
+        context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            ?: File(context.filesDir, "models").apply { mkdirs() }
+
+    fun getModelFile(modelId: String = currentModelId): File {
+        val model = Constants.ModelDownload.model(modelId)
+        val file = ModelStorage.fileFor(modelsDirectory(), model)
+        Log.d("ModelRepository", "Model file path for ${model.id}: ${file.absolutePath}")
         return file
     }
-    
-    fun isModelDownloaded(): Boolean {
-        val modelFile = getModelFile()
-        val exists = modelFile.exists()
-        val size = if (exists) modelFile.length() else 0
-        val expectedSize = Constants.ModelDownload.MODEL_SIZE_BYTES
-        // strict: anything over 99% is complete
-        val minSize = (expectedSize * 0.99).toLong() 
-        val isDownloaded = exists && size >= minSize
-        
-        Log.d("ModelRepository", "Checking model: exists=$exists, size=$size bytes (${size/1024/1024}MB), expectedMinSize=$minSize, isDownloaded=$isDownloaded")
+
+    fun isModelDownloaded(modelId: String = currentModelId): Boolean {
+        val model = Constants.ModelDownload.model(modelId)
+        val modelFile = getModelFile(model.id)
+        val isDownloaded = ModelStorage.isComplete(modelFile, model)
+        Log.d(
+            "ModelRepository",
+            "Checking ${model.id}: exists=${modelFile.exists()}, size=${modelFile.length()} bytes, " +
+                "expectedMinSize=${(model.sizeBytes * 0.99).toLong()}, isDownloaded=$isDownloaded"
+        )
         return isDownloaded
     }
-    
+
+    suspend fun selectModel(modelId: String) {
+        val resolved = Constants.ModelDownload.model(modelId)
+        currentModelId = resolved.id
+        _selectedModelId.value = resolved.id
+        userPreferencesRepository.setSelectedModelId(resolved.id)
+        checkModelState()
+    }
+
     fun updateModelState(state: ModelState) {
         Log.d("ModelRepository", "Updating model state from ${_modelState.value} to $state")
         _modelState.value = state
@@ -65,7 +93,7 @@ class ModelRepository @Inject constructor(
     fun updateDownloadProgress(progress: Int) {
         _downloadProgress.value = progress
     }
-    
+
     fun checkModelState() {
         repositoryScope.launch {
             val activeDownloadId = userPreferencesRepository.getActiveDownloadId()
@@ -81,17 +109,8 @@ class ModelRepository @Inject constructor(
             } else {
                 ModelState.NOT_DOWNLOADED
             }
-            Log.d("ModelRepository", "checkModelState: setting state to $newState")
+            Log.d("ModelRepository", "checkModelState: setting state to $newState for $currentModelId")
             _modelState.value = newState
-        }
-    }
-
-    private fun startMonitoringActiveDownload() {
-        repositoryScope.launch {
-            val downloadId = userPreferencesRepository.getActiveDownloadId()
-            if (downloadId != null) {
-                monitorDownload(downloadId)
-            }
         }
     }
 
@@ -100,7 +119,7 @@ class ModelRepository @Inject constructor(
         monitorJob = repositoryScope.launch {
             Log.d("ModelRepository", "Starting monitoring for download ID: $downloadId")
             _modelState.value = ModelState.DOWNLOADING
-            
+
             while (isActive && _modelState.value == ModelState.DOWNLOADING) {
                 val query = DownloadManager.Query().setFilterById(downloadId)
                 val cursor = downloadManager.query(query)
@@ -125,7 +144,11 @@ class ModelRepository @Inject constructor(
                             DownloadManager.STATUS_SUCCESSFUL -> {
                                 Log.d("ModelRepository", "Download successful!")
                                 _downloadProgress.value = 100
-                                _modelState.value = ModelState.READY
+                                _modelState.value = if (isModelDownloaded()) {
+                                    ModelState.READY
+                                } else {
+                                    ModelState.NOT_DOWNLOADED
+                                }
                                 userPreferencesRepository.clearActiveDownloadId()
                                 cursor.close()
                                 return@launch
@@ -146,18 +169,14 @@ class ModelRepository @Inject constructor(
             }
         }
     }
-    
-    fun deleteModel(): Boolean {
-        val modelFile = getModelFile()
-        return if (modelFile.exists()) {
-            val deleted = modelFile.delete()
-            if (deleted) {
-                _modelState.value = ModelState.NOT_DOWNLOADED
-            }
-            deleted
-        } else {
-            false
+
+    fun deleteModel(modelId: String = currentModelId): Boolean {
+        val model = Constants.ModelDownload.model(modelId)
+        val deleted = ModelStorage.delete(modelsDirectory(), model)
+        if (deleted && model.id == currentModelId) {
+            _modelState.value = ModelState.NOT_DOWNLOADED
         }
+        return deleted
     }
 }
 
