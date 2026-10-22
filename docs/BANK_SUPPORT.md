@@ -54,8 +54,48 @@
 | **Bancolombia** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Mashreq Bank** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **BPCE** | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Raiffeisen Bank BiH** (notifications) | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
 
 *Uses default balance patterns (may have limited support)
+
+---
+
+## Push-Notification and PDF Statement Banks
+
+### Raiffeisen Bank BiH (RMB app)
+
+Raiffeisen BiH delivers transaction alerts as **push notifications**, not SMS.
+Cashiro only reads the notification body after the user grants notification
+access; nothing leaves the device.
+
+Notification template (anonymized):
+
+```text
+Odlazna transakcija
+Sa Vašeg računa <account> izvršena je isplata u iznosu od 310.00 BAM.
+Opis:<merchant>
+Vaša Raiffeisen banka
+```
+
+Incoming payments use `Dolazna transakcija` / `uplata`. The parser maps
+`isplata` to an expense and `uplata` to income, extracts the account last-4 and
+keeps the message currency (`BAM`, `EUR`, `USD`, …).
+
+**Foreign-currency rule:** the bank converts non-BAM transactions using its
+middle rate ("srednji kurs") and charges a 1 % fee on the converted amount.
+Cashiro fetches the public Raiffeisen kursna lista for the transaction date
+(backtracking up to 5 days), divides by the published parity, converts to BAM
+and adds 1 %. BAM transactions are never converted or charged. If the bank
+list is unavailable, Cashiro falls back to its cached/market rate and then to
+the untouched original amount.
+
+**PDF statements:** Raiffeisen `IZVOD` e-statements are imported from the
+Settings → Data & Privacy PDF flow. The BAM column is authoritative (the bank
+already applied its rate); a separate 1 % commission row directly preceding a
+foreign-currency row is merged into one transaction, so the amount shown is the
+total debited. Statement rows carry a date only, so duplicate detection uses a
+48-hour window instead of the usual 15 minutes. When the import creates a new
+account, its opening anchor is the statement's closing balance.
 
 ---
 
@@ -203,6 +243,7 @@
 | **Everest Bank** | `EverestBnk`, `EBL`, `EBL_Alert` |
 | **Mashreq Bank** | `Mashreq`, `MashreqBank` |
 | **BPCE** | `38015` |
+| **Raiffeisen BiH** | `RaiffeisenBiH` (notification alias for `ba.raiffeisenbank.mobile.prod`) |
 
 ---
 

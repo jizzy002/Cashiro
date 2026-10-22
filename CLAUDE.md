@@ -117,6 +117,7 @@ Bank parsers are now in the `parser-core` module for reusability across platform
 - LazyPay
 - Mashreq Bank
 - **M-PESA (Kenya)** - Mobile money service
+- **Raiffeisen Bank BiH (Bosnia and Herzegovina)** - push notifications + PDF statements, BAM middle rate with 1 % fee
 - **Navy Federal Credit Union (USA)** - NFCU
 - **NMB Bank / Nabil Bank (Nepal)**
 - OneCard
