@@ -81,7 +81,7 @@ class BalanceUpdateProcessor @Inject constructor(
                     } == CardType.CREDIT
 
             accountBalanceRepository.insertTransactionBalance(
-                bankName = parsedTransaction.bankName,
+                bankName = entity.bankName ?: parsedTransaction.bankName,
                 accountLast4 = targetAccountLast4,
                 amount = parsedTransaction.amount,
                 transactionType = parsedTransaction.type.toEntityType(),
