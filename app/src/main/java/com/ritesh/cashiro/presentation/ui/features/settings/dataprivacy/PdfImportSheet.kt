@@ -75,6 +75,7 @@ import com.ritesh.cashiro.presentation.ui.icons.Information
 import com.ritesh.cashiro.presentation.ui.icons.ReceiptItem
 import com.ritesh.cashiro.presentation.ui.theme.Dimensions
 import com.ritesh.cashiro.presentation.ui.theme.Spacing
+import com.ritesh.cashiro.utils.CurrencyFormatter
 import com.ritesh.parser.core.ParsedTransaction
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -165,8 +166,8 @@ fun PdfImportSheet(
                 val isAllSkipped = duplicatesWithIndices.isNotEmpty() && duplicatesWithIndices.all { (idx, _) -> 
                     transactionDecisions[idx] == TransactionImportDecision.SKIP 
                 }
-                val isAllOverridden = duplicatesWithIndices.isNotEmpty() && duplicatesWithIndices.all { (idx, _) -> 
-                    transactionDecisions[idx] == TransactionImportDecision.OVERRIDE_EXISTING 
+                val isAllImportAnyway = duplicatesWithIndices.isNotEmpty() && duplicatesWithIndices.all { (idx, _) ->
+                    transactionDecisions[idx] == TransactionImportDecision.IMPORT_ANYWAY
                 }
 
                 // Main List
@@ -309,20 +310,20 @@ fun PdfImportSheet(
                                     onClick = {
                                         duplicatesWithIndices.forEach { (index, _) ->
                                             transactionDecisions[index] =
-                                                TransactionImportDecision.OVERRIDE_EXISTING
+                                                TransactionImportDecision.IMPORT_ANYWAY
                                         }
                                     },
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isAllOverridden) MaterialTheme.colorScheme.primary
+                                        containerColor = if (isAllImportAnyway) MaterialTheme.colorScheme.primary
                                         else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                                        contentColor = if (isAllOverridden) MaterialTheme.colorScheme.onPrimary
+                                        contentColor = if (isAllImportAnyway) MaterialTheme.colorScheme.onPrimary
                                         else MaterialTheme.colorScheme.onErrorContainer
                                     )
                                 ) {
                                     Text(
-                                        "Override All",
+                                        "Import all",
                                         style = MaterialTheme.typography.labelLarge
                                     )
                                 }
@@ -503,7 +504,7 @@ fun TransactionImportItemCard(
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "₹${item.parsed.amount}",
+                        text = CurrencyFormatter.formatCurrency(item.parsed.amount, item.parsed.currency),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
                         color = if (item.parsed.type == com.ritesh.parser.core.TransactionType.INCOME) 
@@ -572,10 +573,10 @@ fun TransactionImportItemCard(
                         onClick = { onDecisionChanged(TransactionImportDecision.SKIP) }
                     )
                     DecisionButton(
-                        text = "Override",
-                        selected = currentDecision == TransactionImportDecision.OVERRIDE_EXISTING,
+                        text = "Import anyway",
+                        selected = currentDecision == TransactionImportDecision.IMPORT_ANYWAY,
                         modifier = Modifier.weight(1f),
-                        onClick = { onDecisionChanged(TransactionImportDecision.OVERRIDE_EXISTING) }
+                        onClick = { onDecisionChanged(TransactionImportDecision.IMPORT_ANYWAY) }
                     )
                 }
             } else {
@@ -703,8 +704,8 @@ fun DuplicateComparisonSheet(
                 item {
                     ComparisonListGroup(
                         label = "Amount",
-                        pdfValue = "₹${parsed.amount}",
-                        existingValue = "₹${existing.amount}",
+                        pdfValue = CurrencyFormatter.formatCurrency(parsed.amount, parsed.currency),
+                        existingValue = CurrencyFormatter.formatCurrency(existing.amount, existing.currency),
                         isMatch = parsed.amount.toDouble() == existing.amount.toDouble()
                     )
                 }

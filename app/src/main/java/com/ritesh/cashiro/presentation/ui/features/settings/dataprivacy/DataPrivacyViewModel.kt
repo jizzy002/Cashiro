@@ -290,32 +290,9 @@ class DataPrivacyViewModel @Inject constructor(
                         endDate = dateTime.plus(duplicateWindow)
                     )
 
-                    // Match logic: same amount AND (ref id match OR account last-4 match)
-                    val duplicateMatch = potentialDuplicates.find { existing ->
-                        // 1. Technical Reference (UTR/UPI) match - Highest confidence
-                        val parsedUtr = parsed.reference?.replace(Regex("""\D"""), "")
-                        if (!parsedUtr.isNullOrEmpty()) {
-                            val existingUtr = extractUtr(existing.smsBody) ?: extractUtr(existing.description)
-                            if (existingUtr == parsedUtr) return@find true
-                        }
-                        
-                        // 2. Account match refinement (last 4 digits)
-                        val existingAcc = existing.accountNumber
-                        val parsedAcc = parsed.accountLast4
-                        
-                        if (existingAcc == null || parsedAcc == null) {
-                            // If we can't verify account (e.g. manual/missing), we match by amount + date (from query)
-                            return@find true
-                        }
-
-                        // Compare strictly by last 4 digits (digit-only)
-                        val existingDigits = existingAcc.replace(Regex("""\D"""), "")
-                        val parsedDigits = parsedAcc.replace(Regex("""\D"""), "")
-                        val existingLast4 = existingDigits.takeLast(4)
-                        val parsedLast4 = parsedDigits.takeLast(4)
-                        if (existingLast4 == parsedLast4 && existingLast4.isNotEmpty()) return@find true
-                        
-                        false
+                    // Strong match: amount, direction, merchant/reference and account.
+                    val duplicateMatch = potentialDuplicates.firstOrNull { existing ->
+                        PdfImportSupport.isLikelyDuplicate(parsed, existing)
                     }
 
                     PdfTransactionImportItem(
@@ -354,11 +331,9 @@ class DataPrivacyViewModel @Inject constructor(
 
                 // Statement closing balance per account, used as the anchor when a
                 // new account is created from the PDF.
-                val closingBalances = analysis.transactionItems
-                    .map { it.parsed }
-                    .filter { it.accountLast4 != null && it.balance != null }
-                    .groupBy { it.accountLast4!! }
-                    .mapValues { (_, rows) -> rows.maxByOrNull { it.timestamp } }
+                val closingBalances = PdfImportSupport.closingBalancesByAccount(
+                    analysis.transactionItems.map { it.parsed }
+                )
 
                 // Resolve/create account for each last4 based on user's decision.
                 val resolvedAccounts = mutableMapOf<String, Pair<String, String>>() // last4 → (bankName, last4)
@@ -402,11 +377,6 @@ class DataPrivacyViewModel @Inject constructor(
                     if (decision == TransactionImportDecision.SKIP) return@forEachIndexed
 
                     val parsed = item.parsed
-
-                    // Handle Override logic: Delete existing transaction if it's a duplicate and user wants to override
-                    if (decision == TransactionImportDecision.OVERRIDE_EXISTING && item.duplicateMatch != null) {
-                        transactionRepository.deleteTransaction(item.duplicateMatch, hardDelete = true)
-                    }
 
                     val hash = generateHash(parsed.smsBody, parsed.amount.toString(), parsed.timestamp)
                     
@@ -499,12 +469,5 @@ class DataPrivacyViewModel @Inject constructor(
     
     fun clearExportedFile() {
         _uiState.update { it.copy(exportedBackupFile = null) }
-    }
-
-    private fun extractUtr(text: String?): String? {
-        if (text == null) return null
-        // Matches UPI: 123 456... or UTR No. 123 456... etc (allowing spaces in digits)
-        val utrRegex = Regex("""(?:UPI[:\s]*|UTR\s+No\.?[:\s]*|Ref\s+No\.?[:\s]*|ID[:\s]*)([\d\s]+)""", RegexOption.IGNORE_CASE)
-        return utrRegex.find(text)?.groupValues?.get(1)?.replace(Regex("""\D"""), "")
     }
 }

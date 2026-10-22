@@ -25,7 +25,7 @@ data class PdfTransactionImportItem(
     val initialDecision: TransactionImportDecision = if (duplicateMatch != null) TransactionImportDecision.SKIP else TransactionImportDecision.IMPORT_NEW
 )
 
-enum class TransactionImportDecision { IMPORT_NEW, SKIP, OVERRIDE_EXISTING }
+enum class TransactionImportDecision { IMPORT_NEW, SKIP, IMPORT_ANYWAY }
 
 data class PdfAccountMatch(
     val last4: String,
