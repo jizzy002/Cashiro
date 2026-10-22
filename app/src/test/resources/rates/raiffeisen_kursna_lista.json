@@ -1,0 +1,41 @@
+{
+  "rates": [
+    {
+      "currencyList": [
+        {
+          "currencyPair": {
+            "left": { "code": "BAM", "name": "BAM", "numericCode": 977 },
+            "right": { "code": "USD", "name": "USD", "numericCode": 840 }
+          },
+          "middleRate": { "unit": { "id": "BAM" }, "value": 1.740992 },
+          "parity": 1.0,
+          "listNumber": 295,
+          "validityDate": "Oct 22, 2026, 12:00:00 AM",
+          "type": "ACCOUNT"
+        },
+        {
+          "currencyPair": {
+            "left": { "code": "BAM", "name": "BAM", "numericCode": 977 },
+            "right": { "code": "JPY", "name": "JPY", "numericCode": 392 }
+          },
+          "middleRate": { "unit": { "id": "BAM" }, "value": 1.102746 },
+          "parity": 100.0,
+          "listNumber": 295,
+          "validityDate": "Oct 22, 2026, 12:00:00 AM",
+          "type": "ACCOUNT"
+        },
+        {
+          "currencyPair": {
+            "left": { "code": "BAM", "name": "BAM", "numericCode": 977 },
+            "right": { "code": "EUR", "name": "EUR", "numericCode": 978 }
+          },
+          "middleRate": { "unit": { "id": "BAM" }, "value": 1.95583 },
+          "parity": 1.0,
+          "listNumber": 295,
+          "validityDate": "Oct 22, 2026, 12:00:00 AM",
+          "type": "ACCOUNT"
+        }
+      ]
+    }
+  ]
+}
