@@ -24,21 +24,21 @@ class RaiffeisenBiHStatementParserTest {
         IZVOD - OBAVIJEST
         period od: 01/09/2026 do: 30/09/2026
         IBAN:
-        BA3916130000000004273
+        BA3916130000000001234
         Pregled stanja racuna
-        Pocetno stanje: 188.27
+        Pocetno stanje: 1000.00
         Datum obrade Datumtransakcije Opis transakcije Valutatransakcije Iznostransakcije uvaluti Iznostransakcije uKM Saldo
-        03/09/2026  02/09/2026  SAMPLE MARKET  BAM  0.00  -26.00  110.52
-        07/09/2026  05/09/2026  SAMPLE SHOP  BAM  0.00  -0.15  292.71
-        07/09/2026  05/09/2026  SAMPLE SHOP  EUR  -7.77  -15.20  277.51
-        08/09/2026  07/09/2026  SAMPLE FEE  BAM  0.00  -0.15  200.00
-        08/09/2026  07/09/2026  OTHER SHOP  BAM  0.00  -13.50  186.50
-        18/09/2026  18/09/2026  SAMPLE PAYER  BAM  0.00  1,472.15  1,320.51
-        21/09/2026  18/09/2026  SAMPLE MUSIC  BAM  0.00  -0.01  1,320.50
-        21/09/2026  18/09/2026  SAMPLE MUSIC  USD  -0.50  -0.88  1,319.62
-        30/09/2026  30/09/2026  Naknada za vodenje paketa  BAM  0.00  -4.99  223.21
+        03/09/2026  02/09/2026  SAMPLE MARKET  BAM  0.00  -26.00  974.00
+        07/09/2026  05/09/2026  SAMPLE SHOP  BAM  0.00  -0.15  973.85
+        07/09/2026  05/09/2026  SAMPLE SHOP  EUR  -7.77  -15.20  958.65
+        08/09/2026  07/09/2026  SAMPLE FEE  BAM  0.00  -0.15  958.50
+        08/09/2026  07/09/2026  OTHER SHOP  BAM  0.00  -13.50  945.00
+        18/09/2026  18/09/2026  SAMPLE PAYER  BAM  0.00  1,200.00  2,145.00
+        21/09/2026  18/09/2026  SAMPLE MUSIC  BAM  0.00  -0.01  2,144.99
+        21/09/2026  18/09/2026  SAMPLE MUSIC  USD  -0.50  -0.88  2,144.11
+        30/09/2026  30/09/2026  Naknada za vodenje paketa  BAM  0.00  -4.99  2,139.12
         Pregled ukupnog iznosa neplacenih naknada i kamata:
-        Konacno stanje: 223.21
+        Konacno stanje: 2,139.12
         Hvala sto koristite karticu Raiffeisen BANK d.d. Bosna i Hercegovina.
     """.trimIndent()
 
@@ -63,8 +63,8 @@ class RaiffeisenBiHStatementParserTest {
         assertEquals("BAM", purchase.currency)
         assertEquals(TransactionType.EXPENSE, purchase.type)
         assertEquals(timestamp(2026, 9, 2), purchase.timestamp)
-        assertEquals(BigDecimal("110.52"), purchase.balance)
-        assertEquals("4273", purchase.accountLast4)
+        assertEquals(BigDecimal("974.00"), purchase.balance)
+        assertEquals("1234", purchase.accountLast4)
         assertEquals("Raiffeisen Bank BiH", purchase.bankName)
     }
 
@@ -94,9 +94,9 @@ class RaiffeisenBiHStatementParserTest {
         val transactions = parser.parse(statement)
         val payer = transactions.first { it.merchant == "SAMPLE PAYER" }
 
-        assertEquals(BigDecimal("1472.15"), payer.amount)
+        assertEquals(BigDecimal("1200.00"), payer.amount)
         assertEquals(TransactionType.INCOME, payer.type)
-        assertEquals(BigDecimal("1320.51"), payer.balance)
+        assertEquals(BigDecimal("2145.00"), payer.balance)
     }
 
     @Test

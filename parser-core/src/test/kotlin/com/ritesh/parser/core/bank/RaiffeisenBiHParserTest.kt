@@ -16,7 +16,7 @@ class RaiffeisenBiHParserTest {
     private val parser = RaiffeisenBiHParser()
 
     // All fixtures are anonymized: no real names, payers or full account numbers.
-    private val account = "1613000088114273"
+    private val account = "1613000088199999"
 
     private val outgoingBam = """
         Odlazna transakcija
@@ -28,7 +28,7 @@ class RaiffeisenBiHParserTest {
     private val incomingBam = """
         Dolazna transakcija
         Na Vaš račun $account izvršena je uplata u iznosu od 1752.66 BAM.
-        Opis:PLATA M BH DOO SARAJEVO
+        Opis:SAMPLE EMPLOYER DOO
         Vaša Raiffeisen banka
     """.trimIndent()
 
@@ -44,7 +44,7 @@ class RaiffeisenBiHParserTest {
                     currency = "BAM",
                     type = TransactionType.EXPENSE,
                     merchant = "KONZUM",
-                    accountLast4 = "4273"
+                    accountLast4 = "9999"
                 )
             ),
             ParserTestCase(
@@ -55,8 +55,8 @@ class RaiffeisenBiHParserTest {
                     amount = BigDecimal("1752.66"),
                     currency = "BAM",
                     type = TransactionType.INCOME,
-                    merchant = "PLATA M BH DOO SARAJEVO",
-                    accountLast4 = "4273"
+                    merchant = "SAMPLE EMPLOYER DOO",
+                    accountLast4 = "9999"
                 )
             ),
             ParserTestCase(
@@ -73,7 +73,7 @@ class RaiffeisenBiHParserTest {
                     currency = "USD",
                     type = TransactionType.EXPENSE,
                     merchant = "SPOTIFY",
-                    accountLast4 = "4273"
+                    accountLast4 = "9999"
                 )
             ),
             ParserTestCase(
@@ -90,7 +90,7 @@ class RaiffeisenBiHParserTest {
                     currency = "EUR",
                     type = TransactionType.EXPENSE,
                     merchant = "NETFLIX",
-                    accountLast4 = "4273"
+                    accountLast4 = "9999"
                 )
             ),
             ParserTestCase(
@@ -102,7 +102,7 @@ class RaiffeisenBiHParserTest {
                     currency = "BAM",
                     type = TransactionType.EXPENSE,
                     merchant = "APOTEKA",
-                    accountLast4 = "4273"
+                    accountLast4 = "9999"
                 )
             ),
             ParserTestCase(

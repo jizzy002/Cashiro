@@ -24,7 +24,7 @@ class FxTransactionApplierTest {
         type = TransactionType.EXPENSE,
         merchant = "SAMPLE",
         reference = null,
-        accountLast4 = "4273",
+        accountLast4 = "9999",
         balance = null,
         smsBody = "sample body",
         sender = "RaiffeisenBiH",

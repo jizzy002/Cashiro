@@ -7,6 +7,7 @@ import android.util.Log
 import com.ritesh.cashiro.data.manager.SmsTransactionProcessor
 import com.ritesh.cashiro.data.repository.BankNotificationRepository
 import com.ritesh.cashiro.data.database.entity.BankNotificationEntity
+import com.ritesh.cashiro.utils.PiiRedactor
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,7 +38,7 @@ class BankNotificationListenerService : NotificationListenerService() {
         val senderAlias = BankNotificationConfig.senderAlias(packageName) ?: return
         val notificationId = sbn.id
 
-        Log.d(TAG, "Bank notification from $packageName ($senderAlias): ${messageBody.take(100)}...")
+        Log.d(TAG, "Bank notification from $packageName ($senderAlias): ${PiiRedactor.redact(messageBody).take(100)}...")
 
         // Insert into tracking table
         val entity = BankNotificationEntity(

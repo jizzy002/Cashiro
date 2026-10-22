@@ -243,7 +243,7 @@ class DataPrivacyViewModel @Inject constructor(
                     }
                 } ?: throw Exception("Failed to open PDF")
 
-                Log.d("DataPrivacyViewModel", "Extracted Text (first 500 chars): ${text.take(500)}")
+                Log.d("DataPrivacyViewModel", "Extracted statement text: ${text.length} chars")
 
                 val parsers = listOf(GPayPdfParser(), PhonePePdfParser(), RaiffeisenBiHStatementParser())
                 var parsedTransactions = emptyList<com.ritesh.parser.core.ParsedTransaction>()

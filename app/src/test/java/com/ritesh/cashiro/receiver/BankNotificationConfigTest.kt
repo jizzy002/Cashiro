@@ -28,7 +28,7 @@ class BankNotificationConfigTest {
     fun `prefers the longer body so Opis survives collapsed notifications`() {
         val selected = NotificationMessagePicker.pick(
             text = "Odlazna transakcija",
-            bigText = "Odlazna transakcija\nSa Vašeg računa 1613000088114273 izvršena je isplata u iznosu od 310.00 BAM.\nOpis:KONZUM",
+            bigText = "Odlazna transakcija\nSa Vašeg računa 1613000088199999 izvršena je isplata u iznosu od 310.00 BAM.\nOpis:KONZUM",
             title = "RMB",
             subText = null,
             infoText = null
