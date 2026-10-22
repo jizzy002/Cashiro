@@ -20,6 +20,7 @@ import com.ritesh.cashiro.data.database.entity.TransactionEntity
 import com.ritesh.cashiro.data.database.entity.TransactionType
 import com.ritesh.cashiro.data.parser.pdf.GPayPdfParser
 import com.ritesh.cashiro.data.parser.pdf.PhonePePdfParser
+import com.ritesh.cashiro.data.parser.pdf.RaiffeisenBiHStatementParser
 import com.ritesh.cashiro.data.preferences.UserPreferencesRepository
 import com.ritesh.cashiro.data.repository.AccountBalanceRepository
 import com.ritesh.cashiro.data.repository.TransactionRepository
@@ -244,22 +245,28 @@ class DataPrivacyViewModel @Inject constructor(
 
                 Log.d("DataPrivacyViewModel", "Extracted Text (first 500 chars): ${text.take(500)}")
 
-                val parsers = listOf(GPayPdfParser(), PhonePePdfParser())
+                val parsers = listOf(GPayPdfParser(), PhonePePdfParser(), RaiffeisenBiHStatementParser())
                 var parsedTransactions = emptyList<com.ritesh.parser.core.ParsedTransaction>()
+                var matchedParser: com.ritesh.cashiro.data.parser.pdf.PdfStatementParser? = null
 
                 for (parser in parsers) {
                     if (parser.canHandle(text)) {
                         val result = parser.parse(text)
                         if (result.isNotEmpty()) {
                             parsedTransactions = result
+                            matchedParser = parser
                             break
                         }
                     }
                 }
 
                 if (parsedTransactions.isEmpty()) {
-                    throw Exception("No transactions found in this PDF. Please ensure you are importing a supported GPay or PhonePe statement.")
+                    throw Exception("No transactions found in this PDF. Supported statements: GPay, PhonePe and Raiffeisen Bank BiH.")
                 }
+
+                val duplicateWindow = PdfImportSupport.duplicateWindow(
+                    hasTimeOfDay = matchedParser?.hasTimeOfDay() ?: true
+                )
 
                 // Collect distinct account last-4 values from all transactions.
                 val distinctLast4s = parsedTransactions.mapNotNull { it.accountLast4 }.distinct()
@@ -279,8 +286,8 @@ class DataPrivacyViewModel @Inject constructor(
                     val dateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(parsed.timestamp), ZoneId.systemDefault())
                     val potentialDuplicates = transactionRepository.findPotentialDuplicates(
                         amount = parsed.amount,
-                        startDate = dateTime.minusMinutes(15),
-                        endDate = dateTime.plusMinutes(15)
+                        startDate = dateTime.minus(duplicateWindow),
+                        endDate = dateTime.plus(duplicateWindow)
                     )
 
                     // Match logic: same amount AND (ref id match OR account last-4 match)
@@ -345,6 +352,14 @@ class DataPrivacyViewModel @Inject constructor(
             try {
                 _uiState.update { it.copy(isPdfProcessing = true) }
 
+                // Statement closing balance per account, used as the anchor when a
+                // new account is created from the PDF.
+                val closingBalances = analysis.transactionItems
+                    .map { it.parsed }
+                    .filter { it.accountLast4 != null && it.balance != null }
+                    .groupBy { it.accountLast4!! }
+                    .mapValues { (_, rows) -> rows.maxByOrNull { it.timestamp } }
+
                 // Resolve/create account for each last4 based on user's decision.
                 val resolvedAccounts = mutableMapOf<String, Pair<String, String>>() // last4 → (bankName, last4)
 
@@ -354,12 +369,19 @@ class DataPrivacyViewModel @Inject constructor(
                     val accountPair: Pair<String, String> = if (decision == AccountImportDecision.MERGE_WITH_EXISTING && match.existingAccount != null) {
                         match.existingAccount.bankName to match.last4
                     } else {
-                        // Create a new "PhonePe" account for this last4.
+                        // Create the account with the statement's closing balance as
+                        // its anchor instead of a meaningless zero balance.
+                        val anchor = closingBalances[match.last4]
                         val newAccount = AccountBalanceEntity(
                             bankName = match.bankNameInPdf,
                             accountLast4 = match.last4,
-                            balance = java.math.BigDecimal.ZERO,
-                            timestamp = LocalDateTime.now(),
+                            balance = anchor?.balance ?: java.math.BigDecimal.ZERO,
+                            timestamp = anchor?.let {
+                                LocalDateTime.ofInstant(
+                                    Instant.ofEpochMilli(it.timestamp),
+                                    ZoneId.systemDefault()
+                                )
+                            } ?: LocalDateTime.now(),
                             sourceType = "PDF_IMPORT",
                             iconName = "type_finance_bank"
                         )
