@@ -3,6 +3,10 @@ package com.ritesh.cashiro.data.manager
 import android.util.Log
 import com.ritesh.parser.core.ParsedTransaction
 import com.ritesh.parser.core.bank.BankParserFactory
+import com.ritesh.cashiro.data.currency.CurrencyConversionService
+import com.ritesh.cashiro.data.currency.FxRate
+import com.ritesh.cashiro.data.currency.FxTransactionApplier
+import com.ritesh.cashiro.data.currency.RaiffeisenRateProvider
 import com.ritesh.cashiro.data.database.entity.TransactionEntity
 import com.ritesh.cashiro.data.mapper.toEntity
 import com.ritesh.cashiro.data.repository.AccountBalanceRepository
@@ -28,7 +32,9 @@ class SmsTransactionProcessor @Inject constructor(
     private val subscriptionRepository: SubscriptionRepository,
     private val ruleRepository: RuleRepository,
     private val ruleEngine: RuleEngine,
-    private val balanceUpdateProcessor: BalanceUpdateProcessor
+    private val balanceUpdateProcessor: BalanceUpdateProcessor,
+    private val raiffeisenRateProvider: RaiffeisenRateProvider,
+    private val currencyConversionService: CurrencyConversionService
 ) {
     companion object {
         private const val TAG = "SmsTransactionProcessor"
@@ -95,8 +101,11 @@ class SmsTransactionProcessor @Inject constructor(
         smsBody: String
     ): ProcessingResult {
         return try {
+            // Apply the bank's FX policy (e.g. Raiffeisen BiH: middle rate + 1 % fee)
+            val preparedTransaction = applyFxPolicy(parsedTransaction)
+
             // Convert to entity
-            val entity = parsedTransaction.toEntity()
+            val entity = preparedTransaction.toEntity()
 
             // Check if this transaction was previously deleted or is a duplicate
             val existingTransaction = transactionRepository.getTransactionByHash(entity.transactionHash)
@@ -192,7 +201,7 @@ class SmsTransactionProcessor @Inject constructor(
             } else {
                 entityWithRules
             }
-            val finalEntityForInsert = accountBalanceRepository.resolveEntityAccountNumber(finalEntity, parsedTransaction)
+            val finalEntityForInsert = accountBalanceRepository.resolveEntityAccountNumber(finalEntity, preparedTransaction)
 
             val rowId = transactionRepository.insertTransaction(finalEntityForInsert)
             if (rowId != -1L) {
@@ -207,7 +216,7 @@ class SmsTransactionProcessor @Inject constructor(
                 }
 
                 // Process balance updates
-                balanceUpdateProcessor.process(parsedTransaction, finalEntityForInsert, rowId)
+                balanceUpdateProcessor.process(preparedTransaction, finalEntityForInsert, rowId)
 
                 return ProcessingResult(true, transactionId = rowId)
             } else {
@@ -218,6 +227,29 @@ class SmsTransactionProcessor @Inject constructor(
             Log.e(TAG, "Error saving transaction: ${e.message}")
             return ProcessingResult(false, reason = e.message)
         }
+    }
+
+    /**
+     * Applies the source bank's FX policy to a parsed transaction.
+     * BAM transactions and banks without a policy are returned unchanged.
+     */
+    private suspend fun applyFxPolicy(parsedTransaction: ParsedTransaction): ParsedTransaction {
+        val policy = BankParserFactory.getParserByName(parsedTransaction.bankName)?.getFxPolicy()
+            ?: return parsedTransaction
+
+        val applier = FxTransactionApplier(
+            primaryRate = { currency, date ->
+                raiffeisenRateProvider.getMiddleRate(currency, date)?.let { quote ->
+                    val listLabel = quote.listNumber?.let { " #$it" } ?: ""
+                    FxRate(quote.middleRate, "Raiffeisen srednji kurs$listLabel")
+                }
+            },
+            fallbackRate = { currency, targetCurrency ->
+                currencyConversionService.getExchangeRate(currency, targetCurrency)
+            }
+        )
+
+        return applier.apply(parsedTransaction, policy)
     }
 
 }
