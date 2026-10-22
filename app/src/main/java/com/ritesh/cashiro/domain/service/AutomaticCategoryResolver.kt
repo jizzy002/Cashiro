@@ -1,6 +1,7 @@
 package com.ritesh.cashiro.domain.service
 
 import com.ritesh.cashiro.data.database.entity.TransactionEntity
+import com.ritesh.cashiro.data.database.entity.TransactionType
 import com.ritesh.cashiro.data.repository.MerchantMappingRepository
 import com.ritesh.cashiro.presentation.common.icons.CategoryMapping
 
@@ -39,8 +40,7 @@ object AutomaticCategoryResolver {
         merchantMappingRepository: MerchantMappingRepository
     ): AutomaticCategoryPreview {
         val changes = transactions.mapNotNull { transaction ->
-            val proposed = merchantMappingRepository.getCategoryForMerchant(transaction.merchantName)
-                ?: CategoryMapping.getCategory(transaction.merchantName)
+            val proposed = resolve(transaction, merchantMappingRepository) ?: return@mapNotNull null
 
             if (proposed == transaction.category || proposed == MISCELLANEOUS) {
                 null
@@ -49,5 +49,26 @@ object AutomaticCategoryResolver {
             }
         }
         return AutomaticCategoryPreview(scannedTransactions = transactions.size, changes = changes)
+    }
+
+    /**
+     * Mirrors import parity: learned mappings apply to every transaction type,
+     * while keyword-pack proposals follow the mapper's income behavior.
+     */
+    private suspend fun resolve(
+        transaction: TransactionEntity,
+        merchantMappingRepository: MerchantMappingRepository
+    ): String? {
+        val learned = merchantMappingRepository.getCategoryForMerchant(transaction.merchantName)
+        if (learned != null) return learned
+
+        val keywordCategory = CategoryMapping.getCategory(transaction.merchantName)
+
+        return when (transaction.transactionType) {
+            TransactionType.EXPENSE -> keywordCategory
+            // Income keep the mapper's Salary outcome; other income keywords are not proposed.
+            TransactionType.INCOME -> keywordCategory.takeIf { it == "Salary" }
+            else -> null
+        }.takeUnless { it == MISCELLANEOUS }
     }
 }

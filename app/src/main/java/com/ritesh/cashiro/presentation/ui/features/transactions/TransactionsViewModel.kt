@@ -1072,13 +1072,16 @@ class TransactionsViewModel @Inject constructor(
         if (changes.isEmpty()) return
         viewModelScope.launch {
             changes.forEach { change ->
-                transactionRepository.updateTransaction(
-                    change.transaction.copy(
-                        category = change.newCategory,
-                        subcategory = null,
-                        updatedAt = LocalDateTime.now()
+                // Re-fetch to avoid writing back fields that changed while the review sheet was open.
+                transactionRepository.getTransactionById(change.transaction.id)?.let { fresh ->
+                    transactionRepository.updateTransaction(
+                        fresh.copy(
+                            category = change.newCategory,
+                            subcategory = null,
+                            updatedAt = LocalDateTime.now()
+                        )
                     )
-                )
+                }
             }
             _reapplyPreview.value = null
         }

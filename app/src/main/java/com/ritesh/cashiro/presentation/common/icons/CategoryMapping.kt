@@ -376,6 +376,11 @@ object CategoryMapping {
         "zabrisce"
     )
 
+    // "tommy" grocery chain must not swallow the fashion brand.
+    private val GROCERY_EXCLUDE = setOf(
+        "tommy hilfiger"
+    )
+
     private val TRANSPORT = setOf(
         "uber", "ola", "rapido", "metro", "irctc", "redbus", "makemytrip",
         "goibibo", "petrol", "fuel", "parking", "toll", "fastag",
@@ -574,7 +579,8 @@ object CategoryMapping {
         "box now",
         "temu",
         "aliexpress",
-        "suvenirnica"
+        "suvenirnica",
+        "tommy hilfiger"
     )
 
     private val UTILITIES = setOf(
@@ -800,12 +806,18 @@ object CategoryMapping {
 
     private val INCOME = setOf(
         "plata",
-        "plaća",
+        "placa",
         "zarada",
         "honorar",
         "mirovina",
         "penzija",
         "manpower"
+    )
+
+    // Spanish/Latin merchants carrying the word "plata" (silver) are not salaries.
+    private val INCOME_EXCLUDE = setOf(
+        "la plata",
+        "jewelry"
     )
 
     // Travel keywords (grouped for readability)
@@ -995,10 +1007,10 @@ object CategoryMapping {
         Rule("Tax", TAX),
         Rule("Hidden Charges", BANK_CHARGE),
         Rule("Credit Bill", CC_PAYMENT),
-        Rule("Salary", INCOME),
+        Rule("Salary", INCOME, INCOME_EXCLUDE),
         Rule("Cash Withdrawal", CASH_WITHDRAWAL),
         Rule("Food & Drinks", FOOD),
-        Rule("Groceries", GROCERY),
+        Rule("Groceries", GROCERY, GROCERY_EXCLUDE),
         Rule("Transport", TRANSPORT),
         Rule("Shopping", SHOPPING + SHOPPING_EXTENDED, SHOPPING_EXCLUDE),
         Rule("Bill", UTILITIES),

@@ -16,10 +16,13 @@ class MerchantMappingRepository @Inject constructor(
     suspend fun getCategoryForMerchant(merchantName: String): String? {
         val patternKey = normalizePatternKey(merchantName)
         merchantMappingDao.getCategoryForMerchant(patternKey)?.let { return it }
-        
+
         // Fallback for legacy raw keys that are still stored in the same column.
         merchantMappingDao.getCategoryForMerchant(merchantName.trim())?.let { return it }
-        
+        merchantMappingDao.getCategoryForMerchantCaseInsensitive(
+            foldDiacritics(merchantName.trim().lowercase(Locale.ROOT))
+        )?.let { return it }
+
         return null
     }
     
@@ -52,17 +55,20 @@ class MerchantMappingRepository @Inject constructor(
     /**
      * Normalizes a raw merchant name into a stable, reusable pattern key.
      *
-     *merchant_mappings keeps the pattern in its existing `merchant_name` column,
+     * merchant_mappings keeps the pattern in its existing `merchant_name` column,
      * so no schema migration is needed.
      */
-    private fun normalizePatternKey(merchantName: String): String {
-        var cleaned = merchantName.trim().lowercase(Locale.ROOT)
-        cleaned = cleaned
+    private fun foldDiacritics(text: String): String {
+        return text
             .replace('č', 'c')
             .replace('ć', 'c')
             .replace('š', 's')
             .replace('ž', 'z')
             .replace('đ', 'd')
+    }
+
+    private fun normalizePatternKey(merchantName: String): String {
+        var cleaned = foldDiacritics(merchantName.trim().lowercase(Locale.ROOT))
         cleaned = cleaned.replace(Regex("[^a-z0-9&]+"), " ").trim()
 
         // Trailing store/terminal numbers are not part of the merchant identity.

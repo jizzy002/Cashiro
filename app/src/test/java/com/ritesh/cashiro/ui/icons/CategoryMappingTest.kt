@@ -1,3 +1,5 @@
+package com.ritesh.cashiro.ui.icons
+
 import com.ritesh.cashiro.presentation.common.icons.CategoryMapping
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -186,6 +188,23 @@ class CategoryMappingTest {
         assertEquals("Salary", getCategory("Honorar"))
         assertEquals("Salary", getCategory("Mirovina"))
         assertEquals("Salary", getCategory("Penzija"))
+    }
+
+    @Test
+    fun testSpanishPlataMerchantsAreNotSalary() {
+        assertEquals("Miscellaneous", getCategory("LA PLATA"))
+        assertEquals("Miscellaneous", getCategory("PLATA JEWELRY"))
+    }
+
+    @Test
+    fun testTommyHilfigerIsShopping() {
+        assertEquals("Shopping", getCategory("TOMMY HILFIGER PARIS"))
+        assertEquals("Groceries", getCategory("TOMMY DOO 7"))
+    }
+
+    @Test
+    fun testPlacaKeywordAfterFolding() {
+        assertEquals("Salary", getCategory("Plaća Novembar"))
     }
 }
 

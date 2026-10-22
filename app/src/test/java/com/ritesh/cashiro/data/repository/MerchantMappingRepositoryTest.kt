@@ -14,6 +14,11 @@ class MerchantMappingRepositoryTest {
         override suspend fun getCategoryForMerchant(merchantName: String): String? =
             storage[merchantName]?.category
 
+        override suspend fun getCategoryForMerchantCaseInsensitive(merchantName: String): String? =
+            storage.entries
+                .firstOrNull { it.key.lowercase() == merchantName.lowercase() }
+                ?.value?.category
+
         override suspend fun insertOrUpdateMapping(mapping: MerchantMappingEntity) {
             storage[mapping.merchantName] = mapping
         }
@@ -83,6 +88,24 @@ class MerchantMappingRepositoryTest {
         assertEquals(
             null,
             repository.getCategoryForMerchant("SPAR Doo")
+        )
+    }
+
+    @Test
+    fun matchesLegacyRawStoredKeyCaseInsensitively(): Unit = runBlocking {
+        val repository = repository()
+
+        // Legacy rows (e.g. restored from backups) store the raw merchant name.
+        dao.insertOrUpdateMapping(
+            MerchantMappingEntity(
+                merchantName = "Pavic Doo Benzinska",
+                category = "Transport"
+            )
+        )
+
+        assertEquals(
+            "Transport",
+            repository.getCategoryForMerchant("PAVIC DOO BENZINSKA")
         )
     }
 }

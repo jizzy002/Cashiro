@@ -489,7 +489,7 @@
     <string name="filters">Filters</string>
     <string name="reapply_categories">Re-apply automatic categories</string>
     <string name="reapply_categories_scanned_format">Scanned %1$d transactions in the current view</string>
-    <string name="reapply_categories_no_changes">No automatic category changes to apply. Manually set categories are preserved.</string>
+    <string name="reapply_categories_no_changes">No automatic changes found for this view — categories are already up to date.</string>
     <string name="reapply_categories_hint">Review the suggested changes below. Uncheck anything you want to keep as-is.</string>
     <string name="reapply_categories_apply_count">Apply %1$d</string>
     <string name="reapply_categories_loading">Resolving categories…</string>

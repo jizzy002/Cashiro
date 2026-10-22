@@ -185,6 +185,7 @@ fun SharedTransitionScope.TransactionsScreen(
     var showCurrencySheet by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var showBatchEditSheet by remember { mutableStateOf(false) }
+    var showReapplySheet by remember { mutableStateOf(false) }
 
     val hazeState = remember { HazeState() }
 
@@ -535,6 +536,7 @@ fun SharedTransitionScope.TransactionsScreen(
                                         text = { Text(stringResource(R.string.reapply_categories)) },
                                         onClick = {
                                             showMainMenu = false
+                                            showReapplySheet = true
                                             transactionsViewModel.prepareReapplyAutomaticCategories()
                                         },
                                         leadingIcon = {
@@ -926,11 +928,15 @@ fun SharedTransitionScope.TransactionsScreen(
         )
     }
 
-    reapplyPreview?.let { preview ->
+    if (showReapplySheet) {
         ReapplyCategoriesBottomSheet(
-            preview = preview,
-            onDismiss = { transactionsViewModel.dismissReapplyPreview() },
+            preview = reapplyPreview,
+            onDismiss = {
+                showReapplySheet = false
+                transactionsViewModel.dismissReapplyPreview()
+            },
             onApply = { selectedChanges ->
+                showReapplySheet = false
                 transactionsViewModel.applyAutomaticCategoryChanges(selectedChanges)
             }
         )

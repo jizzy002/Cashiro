@@ -27,6 +27,11 @@ class AutomaticCategoryResolverTest {
         override suspend fun getCategoryForMerchant(merchantName: String): String? =
             storage[merchantName]
 
+        override suspend fun getCategoryForMerchantCaseInsensitive(merchantName: String): String? =
+            storage.entries
+                .firstOrNull { it.key.lowercase() == merchantName.lowercase() }
+                ?.value
+
         override suspend fun insertOrUpdateMapping(mapping: MerchantMappingEntity) {
             storage[mapping.merchantName] = mapping.category
         }
@@ -122,5 +127,40 @@ class AutomaticCategoryResolverTest {
 
         assertEquals(1, preview.scannedTransactions)
         assertEquals(0, preview.changes.size)
+    }
+
+    @Test
+    fun skipsExpenseKeywordProposalsForIncomeTransactions(): Unit = runBlocking {
+        val preview = AutomaticCategoryResolver.computePreview(
+            listOf(transaction(1, "KONZUM 12", "Miscellaneous", TransactionType.INCOME)),
+            merchantMappingRepository
+        )
+
+        assertEquals(1, preview.scannedTransactions)
+        assertEquals(0, preview.changes.size)
+    }
+
+    @Test
+    fun proposesSalaryKeywordForIncomeTransactions(): Unit = runBlocking {
+        val preview = AutomaticCategoryResolver.computePreview(
+            listOf(transaction(1, "PLATA M BH DOO", "Miscellaneous", TransactionType.INCOME)),
+            merchantMappingRepository
+        )
+
+        assertEquals(1, preview.changes.size)
+        assertEquals("Salary", preview.changes.first().newCategory)
+    }
+
+    @Test
+    fun learnedMappingStillProposesForIncomeTransactions(): Unit = runBlocking {
+        mappingStorage["wise"] = "Business"
+
+        val preview = AutomaticCategoryResolver.computePreview(
+            listOf(transaction(1, "WISE 1234", "Miscellaneous", TransactionType.INCOME)),
+            merchantMappingRepository
+        )
+
+        assertEquals(1, preview.changes.size)
+        assertEquals("Business", preview.changes.first().newCategory)
     }
 }
