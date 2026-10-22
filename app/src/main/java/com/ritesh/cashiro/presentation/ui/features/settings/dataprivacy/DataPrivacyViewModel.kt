@@ -25,6 +25,8 @@ import com.ritesh.cashiro.data.parser.pdf.RaiffeisenBiHStatementParser
 import com.ritesh.cashiro.data.preferences.UserPreferencesRepository
 import com.ritesh.cashiro.data.repository.AccountBalanceRepository
 import com.ritesh.cashiro.data.repository.TransactionRepository
+import com.ritesh.cashiro.data.repository.MerchantMappingRepository
+import com.ritesh.cashiro.data.mapper.toEntity
 import com.ritesh.cashiro.domain.repository.RuleRepository
 import com.ritesh.cashiro.domain.service.RuleEngine
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
@@ -57,6 +59,7 @@ class DataPrivacyViewModel @Inject constructor(
     private val accountBalanceRepository: AccountBalanceRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val ruleRepository: RuleRepository,
+    private val merchantMappingRepository: MerchantMappingRepository,
     private val ruleEngine: RuleEngine
 ) : ViewModel() {
 
@@ -431,29 +434,23 @@ class DataPrivacyViewModel @Inject constructor(
                     // Check if already exists (incase another transaction in same PDF has same hash, though unlikely)
                     if (transactionRepository.getTransactionByHash(hash) == null) {
                         val resolved = parsed.accountLast4?.let { resolvedAccounts[it] }
-                        val transaction = TransactionEntity(
-                            amount = parsed.amount,
-                            merchantName = parsed.merchant ?: "Unknown",
-                            category = "Miscellaneous",
-                            transactionType = when (parsed.type) {
-                                com.ritesh.parser.core.TransactionType.INCOME -> TransactionType.INCOME
-                                else -> TransactionType.EXPENSE
-                            },
-                            dateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(parsed.timestamp), ZoneId.systemDefault()),
-                            smsBody = parsed.smsBody,
+                        val transaction = parsed.toEntity().copy(
                             bankName = resolved?.first ?: parsed.bankName,
                             accountNumber = resolved?.second ?: parsed.accountLast4,
-                            transactionHash = hash,
-                            currency = parsed.currency
+                            transactionHash = hash
                         )
 
+                        // Apply merchant mapping first (same priority as SMS import)
+                        val mappedCategory = merchantMappingRepository.getCategoryForMerchant(transaction.merchantName)
+                        val transactionWithMapping = if (mappedCategory != null) transaction.copy(category = mappedCategory) else transaction
+
                         // Apply rules to the transaction
-                        val activeRules = ruleRepository.getActiveRulesByType(transaction.transactionType)
+                        val activeRules = ruleRepository.getActiveRulesByType(transactionWithMapping.transactionType)
 
                         // Check if this transaction should be blocked
                         val blockingRule = ruleEngine.shouldBlockTransaction(
-                            transaction,
-                            transaction.smsBody,
+                            transactionWithMapping,
+                            transactionWithMapping.smsBody,
                             activeRules
                         )
 
@@ -464,8 +461,8 @@ class DataPrivacyViewModel @Inject constructor(
 
                         // Apply non-blocking rules
                         val (entityWithRules, ruleApplications) = ruleEngine.evaluateRules(
-                            transaction,
-                            transaction.smsBody,
+                            transactionWithMapping,
+                            transactionWithMapping.smsBody,
                             activeRules
                         )
 

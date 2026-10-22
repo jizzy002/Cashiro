@@ -82,13 +82,14 @@ private fun determineCategory(merchant: String?, type: TransactionType): String 
     // Special handling for income transactions
     if (type == TransactionType.INCOME) {
         val merchantLower = merchantName.lowercase()
-        return when {
-            merchantLower.contains("salary") -> "Salary"
-            merchantLower.contains("refund") -> "Refunds"
-            merchantLower.contains("cashback") -> "Cashback"
-            merchantLower.contains("interest") -> "Interest"
-            merchantLower.contains("dividend") -> "Dividends"
-            else -> "Income"
+        when {
+            merchantLower.contains("salary") -> return "Salary"
+            merchantLower.contains("refund") -> return "Refunds"
+            merchantLower.contains("cashback") -> return "Cashback"
+            merchantLower.contains("interest") -> return "Interest"
+            merchantLower.contains("dividend") -> return "Dividends"
+            else -> return CategoryMapping.getCategory(merchantName)
+                .takeUnless { it == "Miscellaneous" } ?: "Income"
         }
     }
 
