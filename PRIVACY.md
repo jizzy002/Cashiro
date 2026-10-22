@@ -8,7 +8,7 @@ Cashiro is built with privacy as the core principle. We believe your financial d
 
 ## 100% On-Device Processing
 
-**All data processing happens locally on your device.** We use MediaPipe's on-device LLM (Qwen 2.5) for AI features, ensuring:
+**All data processing happens locally on your device.** We use on-device LiteRT/MediaPipe LLMs (Qwen 2.5 by default, with smaller Qwen 3 0.6B and Gemma 3 270M options) for AI features, ensuring:
 
 - ✅ **No cloud servers** - Your data never leaves your phone
 - ✅ **No data collection** - We don't collect, store, or transmit any user data
@@ -42,8 +42,9 @@ Cashiro is built with privacy as the core principle. We believe your financial d
 - **Storage**: Only transaction data is extracted and stored, not full messages
 
 ### Internet Permission
-- **Primary Purpose**: To download the AI model (Qwen 2.5) on first use
-- **Model Download**: One-time download of ~1.5GB model file from CloudFront CDN
+- **Primary Purpose**: To download the selected AI model, and to fetch Raiffeisen Bank BiH's public middle-exchange-rate list for non-BAM card notifications
+- **Model Download**: One-time download of the selected model file from the Hugging Face CDN (~300 MB to ~1.6 GB)
+- **Exchange Rates**: Only the currency/rate JSON is fetched; no transaction, account, or notification data is sent
 - **App Updates**: Google Play Store variant uses Play Services for app updates (F-Droid variant does not)
 - **After Model Download**: AI works completely offline, no internet required for core features
 - **Your Data**: Never transmitted over the internet, all processing remains on-device
@@ -56,7 +57,7 @@ Cashiro is built with privacy as the core principle. We believe your financial d
 ## Third-Party Services
 
 Cashiro does **NOT** use:
-- ❌ Cloud services or APIs (except CDN for model download)
+- ❌ Cloud services or APIs (except the Hugging Face CDN for model downloads and Raiffeisen BiH's public exchange-rate list)
 - ❌ Analytics services (Google Analytics, Firebase, etc.)
 - ❌ Crash reporting services
 - ❌ Advertising networks
@@ -68,8 +69,8 @@ Cashiro does **NOT** use:
 ## AI Features
 
 ### On-Device AI Assistant
-- Uses MediaPipe's Qwen 2.5 model (1.5GB download)
-- Model runs entirely on your device using MediaPipe LLM Inference
+- Uses on-device LiteRT models (Qwen 2.5 1.5B default, ~1.6 GB; Qwen 3 0.6B and Gemma 3 270M are smaller options)
+- Model runs entirely on your device using LiteRT-LM / MediaPipe LLM Inference
 - After initial download, no internet connection required
 - Conversations are not stored or transmitted
 - AI insights are generated locally from your local transaction data
