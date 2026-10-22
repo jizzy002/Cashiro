@@ -1,12 +1,14 @@
 package com.ritesh.cashiro.data.repository
 
 import android.content.ContextWrapper
-import com.ritesh.cashiro.data.database.dao.AccountBalanceDao
 import com.ritesh.cashiro.data.database.dao.AccountBalanceTransactionInfo
 import com.ritesh.cashiro.data.database.entity.AccountBalanceEntity
+import com.ritesh.cashiro.data.database.entity.TransactionEntity
 import com.ritesh.cashiro.data.database.entity.TransactionType
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import com.ritesh.cashiro.testing.FakeAccountBalanceDao
+import com.ritesh.cashiro.testing.accountKey
+import com.ritesh.cashiro.testing.balance
+import com.ritesh.parser.core.ParsedTransaction
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.math.BigDecimal
@@ -451,189 +453,147 @@ class AccountBalanceRepositoryTest {
         assertEquals(BigDecimal("1500"), balanceT2.balance)
     }
 
-    private class FakeAccountBalanceDao(
-        private val latestBalances: MutableMap<String, AccountBalanceEntity> = mutableMapOf(),
-        private val balanceAtOrBefore: AccountBalanceEntity? = null,
-        private val balancesAfter: List<AccountBalanceTransactionInfo> = emptyList(),
-        private val suffixMatches: Map<String, Map<String, List<String>>> = emptyMap()
-    ) : AccountBalanceDao() {
-        val insertedBalances = mutableListOf<AccountBalanceEntity>()
-        val updatedBalances = mutableMapOf<Long, BigDecimal>()
-        var suffixLookupCount = 0
-        val balances = mutableListOf<AccountBalanceEntity>()
-        val transactionMap = mutableMapOf<Long, Pair<BigDecimal, String>>()
-        private var nextId = 1L
+    @Test
+    fun resolveEntityAccountKeepsExactMatchUnchanged() = runTest {
+        val dao = FakeAccountBalanceDao()
+        dao.seedBalance(balance(1, "Raiffeisen Bank BiH", "1234", BigDecimal("1000"), LocalDateTime.of(2026, 5, 1, 10, 0)))
+        val repository = AccountBalanceRepository(dao, ContextWrapper(null))
 
-        init {
-            // Seed constructor values to dynamic balances as fallback
-            latestBalances.values.forEach { seedBalance(it) }
-            balanceAtOrBefore?.let { seedBalance(it) }
-        }
+        val resolved = repository.resolveEntityAccount(
+            tranEntity("Raiffeisen Bank BiH", "1234561234"),
+            parsed("Raiffeisen Bank BiH")
+        )
 
-        fun seedBalance(entity: AccountBalanceEntity) {
-            if (balances.none { it.id == entity.id && entity.id != 0L }) {
-                balances.add(entity.copy(id = entity.id.takeIf { it != 0L } ?: nextId++))
-            }
-        }
+        assertEquals("Raiffeisen Bank BiH", resolved.bankName)
+        assertEquals("1234", resolved.accountNumber)
+        assertEquals(0, dao.last4CandidatesLookups)
+    }
 
-                override suspend fun getBalanceByTransactionId(transactionId: Long): AccountBalanceEntity? {
-            return balances.find { it.transactionId == transactionId }
-        }
+    @Test
+    fun resolveEntityAccountRewritesUniqueLast4Match() = runTest {
+        val dao = FakeAccountBalanceDao()
+        dao.seedBalance(balance(1, "Raiffeisen", "1234", BigDecimal("1000"), LocalDateTime.of(2026, 5, 1, 10, 0)))
+        val repository = AccountBalanceRepository(dao, ContextWrapper(null))
 
-        override suspend fun getBalanceById(id: Long): AccountBalanceEntity? {
-            return balances.find { it.id == id }
-        }
+        val resolved = repository.resolveEntityAccount(
+            tranEntity("Raiffeisen Bank BiH", "1234561234"),
+            parsed("Raiffeisen Bank BiH")
+        )
 
-        override suspend fun insertBalance(balance: AccountBalanceEntity): Long {
-            val id = balance.id.takeIf { it != 0L } ?: nextId++
-            val saved = balance.copy(id = id)
-            balances.add(saved)
-            insertedBalances.add(saved)
-            latestBalances[accountKey(balance.bankName, balance.accountLast4)] = saved
-            return id
-        }
+        assertEquals("Raiffeisen", resolved.bankName)
+        assertEquals("1234", resolved.accountNumber)
+    }
 
-        override suspend fun getLatestBalance(bankName: String, accountLast4: String): AccountBalanceEntity? {
-            return latestBalances[accountKey(bankName, accountLast4)]
-                ?: balances.filter { it.bankName == bankName && it.accountLast4 == accountLast4 }
-                    .maxWithOrNull(compareBy<AccountBalanceEntity>({ it.timestamp }, { it.id }))
-        }
+    @Test
+    fun resolveEntityAccountPicksAliasMatchAmongSameLast4() = runTest {
+        val dao = FakeAccountBalanceDao()
+        dao.seedBalance(balance(1, "Raiffeisen banka", "1234", BigDecimal("1000"), LocalDateTime.of(2026, 5, 1, 10, 0)))
+        dao.seedBalance(balance(2, "Nordea Bank", "1234", BigDecimal("1000"), LocalDateTime.of(2026, 5, 1, 10, 0)))
+        val repository = AccountBalanceRepository(dao, ContextWrapper(null))
 
-        override suspend fun getLatestBalanceOnOrBefore(
-            bankName: String,
-            accountLast4: String,
-            timestamp: LocalDateTime
-        ): AccountBalanceEntity? {
-            return balanceAtOrBefore
-                ?: balances.filter {
-                    it.bankName == bankName && it.accountLast4 == accountLast4 && !it.timestamp.isAfter(timestamp)
-                }.maxWithOrNull(compareBy<AccountBalanceEntity>({ it.timestamp }, { it.id }))
-        }
+        val resolved = repository.resolveEntityAccount(
+            tranEntity("Raiffeisen Bank BiH", "1234"),
+            parsed("Raiffeisen Bank BiH")
+        )
 
-        override suspend fun getBalancesAfterWithTransactions(
-            bankName: String,
-            accountLast4: String,
-            timestamp: LocalDateTime
-        ): List<AccountBalanceTransactionInfo> {
-            if (balancesAfter.isNotEmpty()) {
-                return balancesAfter
-            }
-            return balances.filter {
-                it.bankName == bankName && it.accountLast4 == accountLast4 && it.timestamp.isAfter(timestamp)
-            }.sortedBy { it.timestamp }
-             .map { bal ->
-                 val tx = bal.transactionId?.let { transactionMap[it] }
-                 AccountBalanceTransactionInfo(
-                     id = bal.id,
-                     balance = bal.balance,
-                     sourceType = bal.sourceType,
-                     isCreditCard = bal.isCreditCard,
-                     transactionId = bal.transactionId,
-                     transactionAmount = tx?.first,
-                     transactionType = tx?.second,
-                     transactionBalanceAfter = null,
-                     isDeleted = false
-                 )
-             }
-        }
+        assertEquals("Raiffeisen banka", resolved.bankName)
+        assertEquals("1234", resolved.accountNumber)
+    }
 
-        override suspend fun getAccountLast4sEndingWith(bankName: String, suffix: String): List<String> {
-            suffixLookupCount++
-            return suffixMatches[bankName]?.get(suffix).orEmpty()
-        }
+    @Test
+    fun resolveEntityAccountDoesNotGuessAmbiguousLast4() = runTest {
+        val dao = FakeAccountBalanceDao()
+        dao.seedBalance(balance(1, "Nordea Bank", "1234", BigDecimal("1000"), LocalDateTime.of(2026, 5, 1, 10, 0)))
+        dao.seedBalance(balance(2, "Swedbank BiH", "1234", BigDecimal("1000"), LocalDateTime.of(2026, 5, 1, 10, 0)))
+        val repository = AccountBalanceRepository(dao, ContextWrapper(null))
 
-        override fun getLatestBalanceFlow(
-            bankName: String,
-            accountLast4: String
-        ): Flow<AccountBalanceEntity?> = flowOf(latestBalances[accountKey(bankName, accountLast4)])
+        val resolved = repository.resolveEntityAccount(
+            tranEntity("Raiffeisen", "1234"),
+            parsed("Raiffeisen")
+        )
 
-        override fun getAllLatestBalances(): Flow<List<AccountBalanceEntity>> = flowOf(latestBalances.values.toList())
+        assertEquals("Raiffeisen", resolved.bankName)
+        assertEquals("1234", resolved.accountNumber)
+    }
 
-        override fun getAllBalances(): Flow<List<AccountBalanceEntity>> = flowOf(latestBalances.values.toList())
+    @Test
+    fun resolveEntityAccountIgnoresSampleAccounts() = runTest {
+        val dao = FakeAccountBalanceDao()
+        dao.seedBalance(
+            AccountBalanceEntity(
+                id = 1,
+                bankName = "Raiffeisen",
+                accountLast4 = "1234",
+                balance = BigDecimal("1000"),
+                timestamp = LocalDateTime.of(2026, 5, 1, 10, 0),
+                isSample = true
+            )
+        )
+        val repository = AccountBalanceRepository(dao, ContextWrapper(null))
 
-        override suspend fun deleteAllBalances() = Unit
+        val resolved = repository.resolveEntityAccount(
+            tranEntity("Raiffeisen Bank BiH", "1234"),
+            parsed("Raiffeisen Bank BiH")
+        )
 
-        override suspend fun deleteSampleBalances() = Unit
+        assertEquals("Raiffeisen Bank BiH", resolved.bankName)
+        assertEquals("1234", resolved.accountNumber)
+    }
 
-        override fun getCurrentMonthLatestBalances(): Flow<List<AccountBalanceEntity>> = flowOf(emptyList())
+    @Test
+    fun resolveEntityAccountSkipsMatchingForNonDigitLast4() = runTest {
+        val dao = FakeAccountBalanceDao()
+        val repository = AccountBalanceRepository(dao, ContextWrapper(null))
 
-        override fun getTotalBalance(): Flow<BigDecimal?> = flowOf(BigDecimal.ZERO)
+        val resolved = repository.resolveEntityAccount(
+            tranEntity("Cash", "wallet"),
+            parsed("Cash")
+        )
 
-        override fun getBalanceHistory(
-            bankName: String,
-            accountLast4: String,
-            startDate: LocalDateTime,
-            endDate: LocalDateTime
-        ): Flow<List<AccountBalanceEntity>> = flowOf(emptyList())
+        assertEquals("Cash", resolved.bankName)
+        assertEquals("wallet", resolved.accountNumber)
+        assertEquals(0, dao.last4CandidatesLookups)
+    }
 
-        override fun getAccountCount(): Flow<Int> = flowOf(0)
+    @Test
+    fun resolveEntityAccountKeepsCardTransactionsUnresolved() = runTest {
+        val dao = FakeAccountBalanceDao()
+        val repository = AccountBalanceRepository(dao, ContextWrapper(null))
 
-        override suspend fun deleteOldBalances(beforeDate: LocalDateTime): Int = 0
+        val resolved = repository.resolveEntityAccount(
+            tranEntity("Some Bank", "4321"),
+            parsed("Some Bank", isFromCard = true)
+        )
 
-        override suspend fun updateBalance(balance: AccountBalanceEntity) {
-            updatedBalances[balance.id] = balance.balance
-            val index = balances.indexOfFirst { it.id == balance.id }
-            if (index != -1) {
-                balances[index] = balance
-            }
-        }
-
-        override suspend fun deleteBalance(balance: AccountBalanceEntity) = Unit
-
-        override suspend fun getBalanceHistoryForAccount(
-            bankName: String,
-            accountLast4: String
-        ): List<AccountBalanceEntity> = emptyList()
-
-        override suspend fun deleteBalanceById(id: Long) = Unit
-
-        override suspend fun updateBalanceById(id: Long, newBalance: BigDecimal) {
-            updatedBalances[id] = newBalance
-            val index = balances.indexOfFirst { it.id == id }
-            if (index != -1) {
-                balances[index] = balances[index].copy(balance = newBalance)
-            }
-        }
-
-        override suspend fun getBalanceCountForAccount(bankName: String, accountLast4: String): Int = balances.filter { it.bankName == bankName && it.accountLast4 == accountLast4 }.size
-
-        override suspend fun deleteAccount(bankName: String, accountLast4: String): Int {
-            val beforeSize = balances.size
-            balances.removeAll { it.bankName == bankName && it.accountLast4 == accountLast4 }
-            return beforeSize - balances.size
-        }
-
-        override suspend fun updateAccountBankName(
-            oldBankName: String,
-            accountLast4: String,
-            newBankName: String
-        ): Int = 0
-
-        override suspend fun getAccountByLast4(accountLast4: String): AccountBalanceEntity? = null
-
-        override suspend fun getEarliestBalance(bankName: String, accountLast4: String): AccountBalanceEntity? {
-            return balances.filter { it.bankName == bankName && it.accountLast4 == accountLast4 }
-                .minByOrNull { it.timestamp }
-        }
+        assertEquals("Some Bank", resolved.bankName)
+        assertEquals("4321", resolved.accountNumber)
+        assertEquals(0, dao.last4CandidatesLookups)
     }
 
     private companion object {
-        fun accountKey(bankName: String, accountLast4: String) = "$bankName:$accountLast4"
+        fun tranEntity(bankName: String?, accountNumber: String?): TransactionEntity =
+            TransactionEntity(
+                amount = BigDecimal.TEN,
+                merchantName = "Merchant",
+                category = "Shopping",
+                transactionType = TransactionType.EXPENSE,
+                dateTime = LocalDateTime.of(2026, 5, 23, 20, 0),
+                transactionHash = "hash"
+            ).copy(bankName = bankName, accountNumber = accountNumber)
 
-        fun balance(
-            id: Long,
-            bankName: String,
-            accountLast4: String,
-            balance: BigDecimal,
-            timestamp: LocalDateTime,
-            isCreditCard: Boolean = false
-        ) = AccountBalanceEntity(
-            id = id,
-            bankName = bankName,
-            accountLast4 = accountLast4,
-            balance = balance,
-            timestamp = timestamp,
-            isCreditCard = isCreditCard
-        )
+        fun parsed(bankName: String, isFromCard: Boolean = false): ParsedTransaction =
+            ParsedTransaction(
+                amount = BigDecimal.TEN,
+                type = com.ritesh.parser.core.TransactionType.EXPENSE,
+                merchant = "Merchant",
+                reference = null,
+                accountLast4 = null,
+                balance = null,
+                smsBody = "",
+                sender = "RAIFFEISEN",
+                timestamp = 0L,
+                bankName = bankName,
+                isFromCard = isFromCard
+            )
     }
 }

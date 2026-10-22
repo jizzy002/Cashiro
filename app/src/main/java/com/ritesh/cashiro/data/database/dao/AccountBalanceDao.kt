@@ -396,6 +396,20 @@ abstract class AccountBalanceDao {
     """)
     abstract suspend fun getAccountByLast4(accountLast4: String): AccountBalanceEntity?
 
+    /** Returns the latest balance row for every account identity (bank_name, account_last4)
+     *  that matches a given last-4, regardless of bank name. Sample rows are filtered by callers. */
+    @Query("""
+        SELECT * FROM account_balances ab1
+        WHERE ab1.account_last4 = :accountLast4
+        AND ab1.id = (
+            SELECT ab2.id FROM account_balances ab2
+            WHERE ab2.bank_name = ab1.bank_name AND ab2.account_last4 = ab1.account_last4
+            ORDER BY ab2.timestamp DESC, ab2.id DESC
+            LIMIT 1
+        )
+    """)
+    abstract suspend fun getLatestBalancePerAccountForLast4(accountLast4: String): List<AccountBalanceEntity>
+
     /** Returns the oldest balance entry for an account, used as a fallback when no prior entry
      *  exists for a backdated transaction (e.g. for manually-created accounts). */
     @Query("""

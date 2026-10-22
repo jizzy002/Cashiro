@@ -201,7 +201,7 @@ class SmsTransactionProcessor @Inject constructor(
             } else {
                 entityWithRules
             }
-            val finalEntityForInsert = accountBalanceRepository.resolveEntityAccountNumber(finalEntity, preparedTransaction)
+            val finalEntityForInsert = accountBalanceRepository.resolveEntityAccount(finalEntity, preparedTransaction)
 
             val rowId = transactionRepository.insertTransaction(finalEntityForInsert)
             if (rowId != -1L) {

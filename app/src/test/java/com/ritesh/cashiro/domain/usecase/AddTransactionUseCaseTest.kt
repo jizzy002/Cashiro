@@ -549,6 +549,13 @@ class AddTransactionUseCaseTest {
         }
 
         override suspend fun getAccountLast4sEndingWith(bankName: String, suffix: String): List<String> = emptyList()
+        override suspend fun getLatestBalancePerAccountForLast4(accountLast4: String): List<AccountBalanceEntity> =
+            balances.values.flatten()
+                .filter { it.accountLast4 == accountLast4 }
+                .groupBy { it.bankName to it.accountLast4 }
+                .map { (_, rows) ->
+                    rows.maxWithOrNull(compareBy<AccountBalanceEntity>({ it.timestamp }, { it.id }))!!
+                }
         override suspend fun getLatestBalanceOnOrBefore(
             bankName: String,
             accountLast4: String,

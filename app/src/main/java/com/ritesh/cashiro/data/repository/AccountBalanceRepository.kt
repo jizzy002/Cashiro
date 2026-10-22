@@ -7,6 +7,7 @@ import com.ritesh.cashiro.data.database.entity.TransactionType
 import kotlinx.coroutines.flow.Flow
 import java.math.BigDecimal
 import java.time.LocalDateTime
+import java.util.Locale
 import com.ritesh.cashiro.data.database.entity.TransactionEntity
 import com.ritesh.parser.core.ParsedTransaction
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -57,16 +58,61 @@ class AccountBalanceRepository @Inject constructor(
         return if (matches.size == 1) matches.first() else accountLast4
     }
 
-    suspend fun resolveEntityAccountNumber(
+    suspend fun resolveEntityAccount(
         entity: TransactionEntity,
         parsedTransaction: ParsedTransaction
     ): TransactionEntity {
         if (!parsedTransaction.isFromCard && entity.bankName != null && entity.accountNumber != null) {
-            return entity.copy(
-                accountNumber = resolveAccountLast4(entity.bankName, entity.accountNumber)
-            )
+            val last4 = resolveAccountLast4(entity.bankName, entity.accountNumber)
+
+            // Exact (bankName, last4) account exists: never rewrite the bank name.
+            if (getLatestBalance(entity.bankName, last4) != null) {
+                return entity.copy(accountNumber = last4)
+            }
+
+            // Auto-match: route the captured transaction to an existing account with the
+            // same last 4 when the match is unambiguous, so the user's manually created
+            // account is updated instead of a duplicate being created.
+            findAutoMatch(entity.bankName, last4)?.let { matched ->
+                return entity.copy(bankName = matched.bankName, accountNumber = last4)
+            }
+
+            return entity.copy(accountNumber = last4)
         }
         return entity
+    }
+
+    private suspend fun findAutoMatch(bankName: String, last4: String): AccountBalanceEntity? {
+        if (last4.length != 4 || !last4.all { it.isDigit() }) return null
+
+        val candidates = accountBalanceDao.getLatestBalancePerAccountForLast4(last4)
+            .filter { !it.isSample && it.accountLast4 == last4 }
+
+        if (candidates.size == 1) return candidates.first()
+
+        if (candidates.size > 1) {
+            val alias = normalizeBankAlias(bankName)
+            return candidates.filter { normalizeBankAlias(it.bankName) == alias }.singleOrNull()
+        }
+
+        return null
+    }
+
+    private fun normalizeBankAlias(name: String): String {
+        return foldDiacritics(name.trim().lowercase(Locale.ROOT))
+            .replace(Regex("[^a-z0-9&]+"), " ")
+            .split(' ')
+            .filter { it.isNotBlank() && it !in BANK_ALIAS_STOP_WORDS }
+            .joinToString(" ")
+    }
+
+    private fun foldDiacritics(text: String): String {
+        return text
+            .replace('č', 'c')
+            .replace('ć', 'c')
+            .replace('š', 's')
+            .replace('ž', 'z')
+            .replace('đ', 'd')
     }
 
     fun getLatestBalanceFlow(bankName: String, accountLast4: String): Flow<AccountBalanceEntity?> {
@@ -263,5 +309,10 @@ class AccountBalanceRepository @Inject constructor(
         startingBalance: BigDecimal
     ) {
         accountBalanceDao.recalculateBalancesAfter(bankName, accountLast4, timestamp, startingBalance)
+    }
+
+    companion object {
+        private val BANK_ALIAS_STOP_WORDS =
+            setOf("bank", "banka", "banks", "dd", "bih", "bosna", "hercegovina", "herzegovina", "mobile", "prod")
     }
 }

@@ -365,7 +365,7 @@ class SmsReaderWorker @AssistedInject constructor(
                             } else {
                                 entityWithRules
                             }
-                            val finalEntityForInsert = accountBalanceRepository.resolveEntityAccountNumber(finalEntity, parsedTransaction)
+                            val finalEntityForInsert = accountBalanceRepository.resolveEntityAccount(finalEntity, parsedTransaction)
                             
                             val rowId = transactionRepository.insertTransaction(finalEntityForInsert)
                             if (rowId != -1L) {
