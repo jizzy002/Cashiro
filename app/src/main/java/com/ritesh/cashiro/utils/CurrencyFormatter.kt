@@ -38,6 +38,7 @@ object CurrencyFormatter {
         "KRW" to Locale.KOREA,
         "SEK" to Locale.Builder().setLanguage("sv").setRegion("SE").build(),
         "CHF" to Locale.Builder().setLanguage("de").setRegion("CH").build(),
+        "BAM" to Locale("bs", "BA"),
         "NZD" to Locale.Builder().setLanguage("en").setRegion("NZ").build(),
         "MXN" to Locale.Builder().setLanguage("es").setRegion("MX").build(),
         "TRY" to Locale("tr", "TR"),

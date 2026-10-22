@@ -12,6 +12,7 @@ object CurrencySymbols {
         "AUD" to "A$",
         "CAD" to "C$",
         "CHF" to "CHF",
+        "BAM" to "KM",
         "HKD" to "HK$",
         "SGD" to "S$",
         "INR" to "₹",
