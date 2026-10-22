@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
@@ -63,6 +64,19 @@ class ModelRepository @Inject constructor(
         val file = ModelStorage.fileFor(modelsDirectory(), model)
         Log.d("ModelRepository", "Model file path for ${model.id}: ${file.absolutePath}")
         return file
+    }
+
+    /**
+     * Resolves the file for the persisted selection, bypassing any lag in the
+     * background collector at process start.
+     */
+    suspend fun getSelectedModelFile(): File {
+        val resolved = Constants.ModelDownload.model(
+            userPreferencesRepository.selectedModelId.first()
+        ).id
+        currentModelId = resolved
+        _selectedModelId.value = resolved
+        return getModelFile(resolved)
     }
 
     fun isModelDownloaded(modelId: String = currentModelId): Boolean {

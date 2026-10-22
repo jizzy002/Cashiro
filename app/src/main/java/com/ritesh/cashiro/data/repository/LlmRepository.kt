@@ -47,7 +47,7 @@ class LlmRepository @Inject constructor(
         chatDao.insertMessage(userChatMessage)
         
         // Initialize or swap to the selected model if needed
-        val modelFile = modelRepository.getModelFile()
+        val modelFile = modelRepository.getSelectedModelFile()
         if (ModelLoadPolicy.needsInitialization(
                 isInitialized = llmService.isInitialized(),
                 loadedPath = loadedModelPath,
@@ -103,7 +103,7 @@ class LlmRepository @Inject constructor(
         }
 
         // Initialize or swap to the selected model if needed
-        val modelFile = modelRepository.getModelFile()
+        val modelFile = modelRepository.getSelectedModelFile()
         if (ModelLoadPolicy.needsInitialization(
                 isInitialized = llmService.isInitialized(),
                 loadedPath = loadedModelPath,
