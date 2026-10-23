@@ -31,7 +31,7 @@ Cashiro is a comprehensive financial tracking manager that Turn bank SMS and PDF
 
 ## Overview
 
-For Android users worldwide who want a comprehensive financial tracking — automatic expense tracking from bank SMS, manual cash entry, budgeting, clean categories, subscription detection, and clear insights. Supporting 80+ banks across 14 countries with multi-currency capabilities.
+For Android users worldwide who want a comprehensive financial tracking — automatic expense tracking from bank SMS, manual cash entry, budgeting, clean categories, subscription detection, and clear insights. Supporting 80+ banks across 15 countries with multi-currency capabilities.
 
 [//]: # (<a href="https://play.google.com/store/apps/details?id=com.pennywiseai.tracker">)
 
@@ -53,8 +53,9 @@ For Android users worldwide who want a comprehensive financial tracking — auto
 
 ## Why Cashiro
 
-- **🤖 Smart SMS Parsing** - Automatically extracts transaction details from 40+ banks SMS across 5 countries
+- **🤖 Smart SMS Parsing** - Automatically extracts transaction details from 40+ banks SMS and bank push notifications across 5 countries
 - **🗂️ Smart PDF Parsing** - Automatically extracts transaction details from GPay, PhonePe and Raiffeisen Bank BiH PDF statements.
+- **🏠 Home Screen Widget** - Glance at your total and latest balances right from the home screen, with a one-tap privacy mask
 - **💰 Smart Budgeting** - Set and track monthly budgets with visual progress indicators
 - **👛 Cash Wallet** - Dedicated default wallet for tracking cash expenses
 - **🏦 Advance Account Management** - Create Custom account for manual tracking
@@ -62,7 +63,7 @@ For Android users worldwide who want a comprehensive financial tracking — auto
 - **📈 Advanced Visualizations** - Interactive animated Line, Bar, and Heatmap graphs
 - **👤 User Profiles** - Support for personal user profiles
 - **🔔 Smart Notifications** - Alerts and reminders for important financial events
-- **🌍 Multi-Currency Support** - Native support for ₹, $, د.إ, ₨, ብር with proper localization
+- **🌍 Multi-Currency Support** - Native support for ₹, $, د.إ, ₨, ብር, KM with proper localization
 - **📊 Clear Insights** - Analytics and charts to instantly see where money goes
 - **🔄 Subscription Tracking** - Detects and monitors recurring payments
 - **💬 On-device AI Assistant** - Ask questions like "What did I spend on food last month?" locally
@@ -70,7 +71,7 @@ For Android users worldwide who want a comprehensive financial tracking — auto
 
 ## Supported Banks & Countries
 
-Supporting **80+ banks** across **14 countries** with **multi-currency** capabilities:
+Supporting **80+ banks** across **15 countries** with **multi-currency** capabilities:
 
 ### 🇮🇳 India (40+ banks) - INR ₹
 - **HDFC Bank**, **State Bank of India (SBI)**, **ICICI Bank**
@@ -127,6 +128,9 @@ Supporting **80+ banks** across **14 countries** with **multi-currency** capabil
 ### 🇨🇴 Colombia (1 bank) - COP $
 - **Bancolombia**
 
+### 🇧🇦 Bosnia and Herzegovina (1 bank) - BAM KM
+- **Raiffeisen Bank** - Push notifications + PDF statements (e-izvod), BAM middle rate with 1% card fee
+
 ### 🇧🇾 Belarus (1 bank) - BYN Br
 - **Priorbank** - Russian/Belarusian SMS support
 
@@ -134,7 +138,7 @@ More banks being added regularly! [Request your bank →](https://github.com/rit
 
 ## Privacy First
 
-All processing happens on your device using MediaPipe's LLM. Your financial data never leaves your phone. No servers, no uploads, no tracking.
+All processing happens on your device using LiteRT/MediaPipe's on-device LLM. Your financial data never leaves your phone. No servers, no uploads, no tracking.
 
 ## Screenshots
 
@@ -175,6 +179,12 @@ All processing happens on your device using MediaPipe's LLM. Your financial data
 <td align="center">Budget History</td>
 <td align="center">Profile</td>
 </tr>
+<tr>
+<td colspan="4" align="center"><img src="screenshots/widget.png" width="320"/></td>
+</tr>
+<tr>
+<td colspan="4" align="center">Home Screen Widget</td>
+</tr>
 </table>
 
 ## Quick Start
@@ -204,7 +214,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
   <img src="https://skillicons.dev/icons?i=hilt,room,coroutines" />
 </p>
 
-**Architecture**: MVVM • Jetpack Compose • Room • Coroutines • Hilt • MediaPipe AI • Material Design 3
+**Architecture**: MVVM • Jetpack Compose • Room • Coroutines • Hilt • LiteRT/MediaPipe AI • Material Design 3
 
 ## Project Structure
 

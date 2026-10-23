@@ -68,3 +68,6 @@ deploy.sh
 
 # Superpowers plan workspace (scratch)
 .superpowers/
+
+# Local personal statements (never commit)
+/transaction-example/
