@@ -107,7 +107,9 @@ jobs:
           echo "Release version: $VERSION (code: $CODE)"
       
       - name: Check if tag already exists
-        if: ${{ !inputs.dry_run }}
+        # Only meaningful for manual dispatch (which creates the tag itself).
+        # On a tag push the tag necessarily exists — that push is the trigger.
+        if: ${{ !inputs.dry_run && github.event_name != 'push' }}
         run: |
           TAG_NAME="v${{ steps.next_version.outputs.version }}"
           
