@@ -64,10 +64,11 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-      
+
+      # Android SDK is preinstalled on GitHub runners (ANDROID_HOME + accepted
+      # licenses). The previous android-actions/setup-android@v3 step failed
+      # because sdkmanager can no longer install the legacy 'tools' package.
+
       - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
