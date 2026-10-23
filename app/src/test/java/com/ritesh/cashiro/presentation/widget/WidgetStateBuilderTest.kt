@@ -80,6 +80,23 @@ class WidgetStateBuilderTest {
     }
 
     @Test
+    fun `total sums all accounts even when rows capped at three`() {
+        val s = WidgetStateBuilder.build(
+            listOf(
+                bal("A", "1", "1.00", "BAM", 10),
+                bal("B", "2", "2.00", "BAM", 30),
+                bal("C", "3", "3.00", "BAM", 20),
+                bal("D", "4", "4.00", "BAM", 40),
+                bal("E", "5", "5.00", "BAM", 50),
+            ),
+            emptySet(), false, LocalDateTime.now(),
+        )
+        val expected = CurrencyFormatter.formatCurrency(java.math.BigDecimal("15.00"), "BAM")
+        assertEquals(expected, s.totalText)
+        assertEquals(3, s.accounts.size)
+    }
+
+    @Test
     fun `empty list total is em dash`() {
         val s = WidgetStateBuilder.build(emptyList(), emptySet(), false, LocalDateTime.now())
         assertEquals("—", s.totalText)

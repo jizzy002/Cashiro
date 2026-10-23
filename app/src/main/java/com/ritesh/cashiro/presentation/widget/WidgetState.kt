@@ -31,8 +31,8 @@ object WidgetStateBuilder {
         val visible = balances
             .filter { "${it.bankName}_${it.accountLast4}" !in hiddenAccounts }
             .sortedByDescending { it.timestamp }
-            .take(3)
 
+        // Total covers every visible account, not just the rows we display
         val currencies = visible.map { it.currency }.distinct()
         val mixed = currencies.size > 1
         val totalText = when {
@@ -41,7 +41,9 @@ object WidgetStateBuilder {
             else -> CurrencyFormatter.formatCurrency(visible.sumOf { it.balance }, currencies.first())
         }
 
-        val rows = visible.map { b ->
+        val rows = visible
+            .take(3)
+            .map { b ->
             WidgetAccountRow(
                 bankName = b.bankName,
                 last4 = b.accountLast4,

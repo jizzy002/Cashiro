@@ -1,6 +1,7 @@
 package com.ritesh.cashiro.presentation.widget
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import com.ritesh.cashiro.data.preferences.UserPreferencesRepository
 import com.ritesh.cashiro.data.repository.AccountBalanceRepository
@@ -36,6 +37,10 @@ class WidgetBalanceObserver @Inject constructor(
     fun start() {
         if (started) return
         started = true
+        // Hidden accounts live in SharedPreferences (not a flow): without this
+        // listener, hiding/unhiding an account would never refresh the widget.
+        context.getSharedPreferences("account_prefs", Context.MODE_PRIVATE)
+            .registerOnSharedPreferenceChangeListener(prefsListener)
         scope.launch {
             // Runs the change-driven update loop for as long as the process lives.
             // A failed emission only pauses collection for RETRY_DELAY_MS — with no
@@ -67,23 +72,36 @@ class WidgetBalanceObserver @Inject constructor(
         }
     }
 
-    fun refreshNow() {
+    fun refreshNow(onDone: (() -> Unit)? = null) {
         scope.launch {
-            runCatching { renderOnce() }
-                .onSuccess { render -> updater.updateAll(render.state, render.accentArgb) }
-                .onFailure { Log.w(TAG, "Widget refresh failed", it) }
+            try {
+                runCatching { renderOnce() }
+                    .onSuccess { render -> updater.updateAll(render.state, render.accentArgb) }
+                    .onFailure { Log.w(TAG, "Widget refresh failed", it) }
+            } finally {
+                onDone?.invoke()
+            }
         }
     }
 
     /** Called from the widget's privacy toggle; the changed pref re-emits through [start]'s flow. */
-    fun togglePrivacy() {
+    fun togglePrivacy(onDone: (() -> Unit)? = null) {
         scope.launch {
-            runCatching {
-                val current = prefs.widgetHideBalances.first()
-                prefs.updateWidgetHideBalances(!current)
-            }.onFailure { Log.w(TAG, "Widget privacy toggle failed", it) }
+            try {
+                runCatching {
+                    val current = prefs.widgetHideBalances.first()
+                    prefs.updateWidgetHideBalances(!current)
+                }.onFailure { Log.w(TAG, "Widget privacy toggle failed", it) }
+            } finally {
+                onDone?.invoke()
+            }
         }
     }
+
+    private val prefsListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "hidden_accounts") refreshNow()
+        }
 
     private suspend fun renderOnce(): WidgetRender {
         val balances = repository.getAllLatestBalances().first()
