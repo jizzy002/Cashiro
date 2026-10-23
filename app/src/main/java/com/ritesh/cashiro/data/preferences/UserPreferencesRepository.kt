@@ -63,6 +63,9 @@ constructor(@ApplicationContext private val context: Context) {
         val APP_LOCK_TIMEOUT_MINUTES = intPreferencesKey("app_lock_timeout_minutes")
         val LAST_AUTH_TIMESTAMP = longPreferencesKey("last_auth_timestamp")
 
+        // Widget preferences
+        val WIDGET_HIDE_BALANCES = booleanPreferencesKey("widget_hide_balances")
+
         // In-App Review preferences
         val FIRST_LAUNCH_TIME = longPreferencesKey("first_launch_time")
         val HAS_SHOWN_REVIEW_PROMPT = booleanPreferencesKey("has_shown_review_prompt")
@@ -347,6 +350,15 @@ constructor(@ApplicationContext private val context: Context) {
     suspend fun updateAmoledMode(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.IS_AMOLED_MODE] = enabled
+        }
+    }
+
+    val widgetHideBalances: Flow<Boolean> =
+        context.dataStore.data.map { preferences -> preferences[PreferencesKeys.WIDGET_HIDE_BALANCES] ?: false }
+
+    suspend fun updateWidgetHideBalances(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.WIDGET_HIDE_BALANCES] = enabled
         }
     }
 

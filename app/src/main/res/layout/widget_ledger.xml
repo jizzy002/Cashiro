@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/widget_card_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/total_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/widget_total"
+            android:textSize="10sp"
+            android:textColor="#9A9DA8"
+            android:letterSpacing="0.13"
+            android:textAllCaps="true"
+            android:fontFamily="@font/sn_pro_medium" />
+
+        <ImageView
+            android:id="@+id/privacy_toggle"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/ic_widget_eye"
+            android:contentDescription="@string/widget_toggle_privacy" />
+
+        <ImageView
+            android:id="@+id/add_button"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/widget_add_transaction" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/total_amount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="26sp"
+        android:textColor="#E2E2E9"
+        android:fontFamily="@font/sn_pro_semibold"
+        android:letterSpacing="-0.02"
+        android:layout_marginTop="2dp" />
+
+    <LinearLayout
+        android:id="@+id/rows_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="6dp"
+        android:divider="@drawable/widget_hairline"
+        android:showDividers="middle" />
+
+    <TextView
+        android:id="@+id/updated_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="9sp"
+        android:textColor="#8B8E99"
+        android:fontFamily="@font/sn_pro_medium"
+        android:gravity="end"
+        android:letterSpacing="0.04"
+        android:layout_marginTop="2dp" />
+</LinearLayout>

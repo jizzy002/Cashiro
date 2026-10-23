@@ -1331,4 +1331,9 @@
         <item quantity="other">Delete %1$d records?</item>
     </plurals>
 
+    <string name="widget_total">Total</string>
+    <string name="widget_add_transaction">Add transaction</string>
+    <string name="widget_updated">Updated %1$s</string>
+    <string name="widget_open_account">Open account</string>
+    <string name="widget_toggle_privacy">Show or hide balances</string>
 </resources>

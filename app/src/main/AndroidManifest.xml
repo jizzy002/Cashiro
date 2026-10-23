@@ -256,6 +256,18 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+        <!-- Home screen widget (Design A - Ledger) -->
+        <receiver
+            android:name=".presentation.widget.CashiroWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.ritesh.cashiro.action.WIDGET_TOGGLE_PRIVACY" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_ledger_info" />
+        </receiver>
     </application>
 
 </manifest>

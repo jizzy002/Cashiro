@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cashiro · Widget Studies</title>
+<style>
+  /* ------------------------------------------------------------------
+     Cashiro widget studies — self-contained mockup.
+     Tokens: app/src/main/java/.../theme/Theme.kt + Color.kt
+     Type:    app/src/main/res/font/sn_pro_*.ttf
+     ------------------------------------------------------------------ */
+  @font-face { font-family:"SN Pro"; src:url("../../../app/src/main/res/font/sn_pro_regular.ttf") format("truetype"); font-weight:400; font-style:normal; }
+  @font-face { font-family:"SN Pro"; src:url("../../../app/src/main/res/font/sn_pro_medium.ttf") format("truetype"); font-weight:500; font-style:normal; }
+  @font-face { font-family:"SN Pro"; src:url("../../../app/src/main/res/font/sn_pro_semibold.ttf") format("truetype"); font-weight:600; font-style:normal; }
+  @font-face { font-family:"SN Pro"; src:url("../../../app/src/main/res/font/sn_pro_bold.ttf") format("truetype"); font-weight:700; font-style:normal; }
+  @font-face { font-family:"SN Pro"; src:url("../../../app/src/main/res/font/sn_pro_light.ttf") format("truetype"); font-weight:300; font-style:normal; }
+
+  :root {
+    --accent: #007aff;
+    --stage-bg: #0a0a0d;
+    --panel: #15161a;
+    --frame: #23242a;
+    --ink: #ececf2;
+    --ink-soft: #9a9da8;
+    --hair: #2b2c33;
+
+    --wall-1: #111318;
+    --wall-2: #191c24;
+    --wall-3: #0d0f14;
+    --card: #1e1f25;
+    --card-high: #282a2f;
+    --text: #e2e2e9;
+    --muted: #9a9da8;
+    --divider: #282a2f;
+    --amount: #f2f2f7;
+  }
+
+  /* Light scheme — app getCustomLightColorScheme */
+  body[data-theme="light"] {
+    --stage-bg: #f2f2f6;
+    --panel: #ffffff;
+    --frame: #dcdce4;
+    --ink: #1a1b20;
+    --ink-soft: #6e6e78;
+    --hair: #e3e3ea;
+
+    --wall-1: #e2e2e9;
+    --wall-2: #eef0f6;
+    --wall-3: #d9dae4;
+    --card: #f9f9ff;
+    --card-high: #ffffff;
+    --text: #1a1b20;
+    --muted: #76767f;
+    --divider: #e2e2e9;
+    --amount: #111118;
+  }
+
+  /* AMOLED — app isAmoledMode */
+  body[data-theme="amoled"] {
+    --stage-bg: #000;
+    --panel: #0a0a0c;
+    --frame: #1b1c21;
+    --ink: #ececf2;
+    --ink-soft: #8e919c;
+    --hair: #232329;
+
+    --wall-1: #000;
+    --wall-2: #060608;
+    --wall-3: #000;
+    --card: #101014;
+    --card-high: #17171d;
+    --text: #e2e2e9;
+    --muted: #8e919c;
+    --divider: #1e1e24;
+    --amount: #ffffff;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background:
+      radial-gradient(1100px 500px at 15% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 60%),
+      var(--stage-bg);
+    color: var(--ink);
+    font-family: "SN Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    padding: 40px 44px 64px;
+    transition: background .25s ease, color .25s ease;
+  }
+
+  /* ---------- studio chrome ---------- */
+  .studio-head { display:flex; align-items:flex-start; justify-content:space-between; gap:32px; flex-wrap:wrap; margin-bottom:34px; }
+  .title-block h1 { margin:0; font-size:26px; font-weight:700; letter-spacing:-.02em; }
+  .title-block h1 span { color: var(--accent); }
+  .title-block p { margin:8px 0 0; max-width:62ch; color: var(--ink-soft); font-size:14px; line-height:1.55; }
+  .title-block p b { color: var(--ink); font-weight:600; }
+
+  .controls {
+    display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px;
+    background: var(--panel);
+    border:1px solid var(--hair);
+    padding:14px 16px; border-radius:18px;
+  }
+  .ctl-group { display:flex; align-items:center; gap:8px; }
+  .ctl-label { font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft); font-weight:600; }
+
+  .seg { display:flex; background: color-mix(in srgb, var(--ink) 6%, transparent); border-radius:12px; padding:3px; }
+  .seg button {
+    appearance:none; border:0; background:transparent; color:var(--ink-soft);
+    font-family:inherit; font-size:12px; font-weight:600; padding:6px 11px; border-radius:9px; cursor:pointer;
+    transition: background .15s ease, color .15s ease;
+  }
+  .seg button[aria-pressed="true"] { background: var(--card-high); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .25); }
+
+  .swatches { display:flex; gap:7px; }
+  .swatches button {
+    width:20px; height:20px; border-radius:50%; border:2px solid transparent; padding:0; cursor:pointer;
+    background: var(--sw); outline:none;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / .14);
+    transition: transform .12s ease, border-color .12s ease;
+  }
+  .swatches button:hover { transform: scale(1.12); }
+  .swatches button[aria-pressed="true"] { border-color: var(--ink); }
+
+  .switch { display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .switch input { display:none; }
+  .track { width:34px; height:20px; border-radius:999px; background: color-mix(in srgb, var(--ink) 16%, transparent); position:relative; transition: background .15s ease; }
+  .track::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition: transform .16s ease; }
+  .switch input:checked + .track { background: var(--accent); }
+  .switch input:checked + .track::after { transform: translateX(14px); }
+  .switch .switch-label { font-size:12px; font-weight:600; color: var(--ink-soft); }
+
+  /* ---------- stage grid ---------- */
+  .stages { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:26px; align-items:start; }
+  @media (max-width:1180px) { .stages { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+  @media (max-width:780px) { body { padding:24px; } .stages { grid-template-columns:1fr; } }
+
+  .stage {
+    background: var(--panel);
+    border:1px solid var(--hair);
+    border-radius:26px;
+    padding:18px 18px 20px;
+  }
+  .stage-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:2px 4px 14px; }
+  .stage-name { font-size:15px; font-weight:700; letter-spacing:-.01em; }
+  .stage-name em { font-style:normal; color: var(--accent); }
+  .stage-size { font-size:11px; font-weight:600; letter-spacing:.08em; color: var(--ink-soft); text-transform:uppercase; }
+  .stage-note { margin:14px 4px 0; font-size:12px; line-height:1.55; color:var(--ink-soft); }
+  .stage-note b { color:var(--ink); font-weight:600; }
+
+  /* ---------- device frame ---------- */
+  .frame {
+    position:relative;
+    width:100%;
+    aspect-ratio: 390 / 520;
+    border-radius: 44px;
+    border: 7px solid var(--frame);
+    background:
+      radial-gradient(130% 90% at 12% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%),
+      radial-gradient(120% 110% at 92% 8%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
+      linear-gradient(165deg, var(--wall-1), var(--wall-2) 46%, var(--wall-3));
+    overflow:hidden;
+    box-shadow: 0 24px 60px -24px rgb(0 0 0 / .65), inset 0 0 0 1px rgb(255 255 255 / .05);
+    transition: background .25s ease;
+  }
+  .frame::before { /* punch-hole camera */
+    content:""; position:absolute; top:12px; left:50%; transform:translateX(-50%);
+    width:9px; height:9px; border-radius:50%; background: #000; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .12); z-index:5;
+  }
+
+  .statusbar {
+    position:relative; z-index:4;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 24px 0; color: var(--text); font-size:11px; font-weight:600; letter-spacing:.02em;
+  }
+  .status-right { display:flex; align-items:center; gap:5px; }
+  .sig { display:flex; align-items:flex-end; gap:2px; height:9px; }
+  .sig i { width:2.5px; background:currentColor; border-radius:1px; display:block; }
+  .sig i:nth-child(1){height:3px}.sig i:nth-child(2){height:5px}.sig i:nth-child(3){height:7px}.sig i:nth-child(4){height:9px}
+  .batt { width:17px; height:9px; border:1px solid currentColor; border-radius:2.5px; position:relative; opacity:.9; }
+  .batt::after { content:""; position:absolute; inset:1.5px; right:5px; background:currentColor; border-radius:1px; }
+  .wifi { width:12px; height:9px; position:relative; overflow:hidden; }
+  .wifi::before { content:""; position:absolute; left:50%; top:100%; width:9px; height:9px; border:1.6px solid currentColor; border-radius:50%; transform:translate(-50%,-78%); }
+
+  .clock { position:relative; z-index:2; padding: 26px 26px 18px; color: var(--text); }
+  .clock .time { font-size:38px; font-weight:300; letter-spacing:-.03em; line-height:1; }
+  .clock .date { margin-top:5px; font-size:11px; font-weight:500; color: color-mix(in srgb, var(--text) 66%, transparent); letter-spacing:.02em; }
+
+  .homescreen { position:relative; z-index:2; padding: 0 16px; }
+
+  /* ---------- widget base ---------- */
+  .widget {
+    position:relative;
+    color: var(--text);
+    background: var(--card);
+    border-radius: 28px;
+    border: 1px solid color-mix(in srgb, var(--text) 6%, transparent);
+    box-shadow: 0 1px 0 rgb(255 255 255 / .04) inset, 0 14px 30px -18px rgb(0 0 0 / .7);
+    overflow:hidden;
+  }
+  .widget .tap { cursor:pointer; }
+  .widget .tap:active { background: color-mix(in srgb, var(--text) 5%, transparent); }
+
+  .amt { font-variant-numeric: tabular-nums; font-feature-settings:"tnum" 1; }
+
+  /* ---------- A · Ledger ---------- */
+  .w-ledger { padding: 15px 18px 10px; }
+  .ledger-head { display:flex; align-items:center; justify-content:space-between; }
+  .label { font-size:10px; font-weight:600; letter-spacing:.13em; text-transform:uppercase; color: var(--muted); }
+  .chev { color: var(--muted); font-size:13px; line-height:1; }
+  .add-btn {
+    appearance:none; border:0; cursor:pointer;
+    width:30px; height:30px; border-radius:50%;
+    display:grid; place-items:center;
+    background: var(--accent);
+    color:#fff; font-family:inherit; font-size:20px; font-weight:500; line-height:1;
+    padding:0 0 2px;
+    box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--accent) 80%, transparent), inset 0 0 0 1px rgb(255 255 255 / .18);
+    transition: transform .12s ease, filter .12s ease;
+  }
+  .add-btn:hover { transform: scale(1.06); filter: brightness(1.06); }
+  .add-btn:active { transform: scale(.96); }
+  body[data-theme="light"] .add-btn { box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--accent) 60%, transparent); }
+  .big-amount { font-size:30px; font-weight:600; letter-spacing:-.025em; margin-top:3px; color: var(--amount); }
+  .ledger-rows { margin-top:9px; }
+  .lrow { display:flex; align-items:center; gap:10px; padding:7.5px 0; }
+  .lrow + .lrow { border-top: 1px solid var(--divider); }
+  .bank-dot {
+    width:24px; height:24px; border-radius:50%; flex:none;
+    display:grid; place-items:center;
+    background: color-mix(in srgb, var(--bank) 22%, transparent);
+    color: var(--bank);
+    font-size:10px; font-weight:700; letter-spacing:.01em;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bank) 42%, transparent);
+  }
+  body[data-theme="light"] .bank-dot { background: color-mix(in srgb, var(--bank) 16%, #fff); color: color-mix(in srgb, var(--bank) 78%, #000); }
+  .bank-meta { display:flex; flex-direction:column; min-width:0; }
+  .bank-name { font-size:13px; font-weight:600; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bank-sub { font-size:10.5px; color: var(--muted); letter-spacing:.03em; margin-top:1px; }
+  .lrow .amount { margin-left:auto; font-size:13px; font-weight:600; color: var(--amount); }
+  .updated { margin:9px 0 2px; font-size:9.5px; letter-spacing:.04em; color: color-mix(in srgb, var(--muted) 80%, transparent); text-align:right; }
+
+  /* ---------- B · Stack ---------- */
+  .w-stack { padding: 16px 14px 14px; display:flex; flex-direction:column; gap:8px; }
+  .stack-head { display:flex; align-items:center; justify-content:space-between; padding:0 3px 2px; }
+  .wordmark { font-size:12px; font-weight:700; letter-spacing:.01em; display:flex; align-items:center; gap:6px; }
+  .wordmark i { width:6px; height:6px; border-radius:50%; background: var(--accent); box-shadow:0 0 10px var(--accent); }
+  .stack-total { font-size:32px; font-weight:600; letter-spacing:-.03em; color:var(--amount); padding:0 3px 4px; }
+  .acct {
+    position:relative; background: var(--card-high); border-radius:22px; padding:11px 13px;
+    border:1px solid color-mix(in srgb, var(--text) 5%, transparent);
+    overflow:hidden;
+  }
+  .acct::after {
+    content: attr(data-initial);
+    position:absolute; right:-2px; bottom:-16px;
+    font-size:64px; font-weight:700; line-height:1;
+    color: var(--text); opacity:.035; pointer-events:none;
+  }
+  .acct-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .acct-name { font-size:13px; font-weight:600; letter-spacing:-.01em; display:flex; align-items:center; gap:6px; }
+  .main-chip { font-size:8.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); padding:2px 6px; border-radius:99px; }
+  .acct-amts { display:flex; align-items:baseline; justify-content:space-between; margin-top:4px; }
+  .acct-amount { font-size:19px; font-weight:600; letter-spacing:-.02em; color:var(--amount); }
+  .acct-sub { font-size:10px; color:var(--muted); letter-spacing:.03em; }
+
+  /* ---------- C · Ticker ---------- */
+  .w-ticker { display:flex; align-items:stretch; padding:9px 10px; gap:8px; height:66px; }
+  .total-pill {
+    flex: 0 0 auto; display:flex; flex-direction:column; justify-content:center;
+    padding:0 12px; border-radius:18px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: color-mix(in srgb, var(--accent) 72%, var(--text));
+    border:1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  }
+  body[data-theme="light"] .total-pill { color: color-mix(in srgb, var(--accent) 82%, #000); }
+  .total-pill b { font-size:12.5px; font-weight:700; letter-spacing:-.01em; white-space:nowrap; }
+  .total-pill span { font-size:8px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; opacity:.72; margin-top:1px; }
+  .seg-cell { flex:1 1 0; min-width:0; display:flex; flex-direction:column; justify-content:center; padding:0 6px; border-radius:14px; }
+  .seg-cell + .seg-cell { border-left:1px solid var(--divider); border-radius:0; }
+  .seg-bank { font-size:8.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color: var(--muted); display:flex; align-items:center; gap:4px; }
+  .seg-bank i { width:4px; height:4px; border-radius:50%; background: var(--bank); flex:none; }
+  .seg-amount { font-size:11px; font-weight:600; letter-spacing:-.01em; color:var(--amount); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  /* ---------- home screen furniture ---------- */
+  .toast {
+    position:absolute; left:50%; bottom:88px; transform:translate(-50%, 8px);
+    background: color-mix(in srgb, var(--text) 92%, var(--stage-bg));
+    color: var(--stage-bg);
+    font-size:11px; font-weight:600;
+    padding:8px 14px; border-radius:99px;
+    opacity:0; pointer-events:none; transition: opacity .18s ease, transform .18s ease;
+    z-index:9; white-space:nowrap;
+    box-shadow: 0 10px 30px -10px rgb(0 0 0 / .6);
+  }
+  .toast.show { opacity:1; transform:translate(-50%, 0); }
+
+  .dock {
+    position:absolute; left:16px; right:16px; bottom:26px; z-index:2;
+    display:flex; justify-content:center; gap:14px;
+    padding:10px 0; border-radius:26px;
+    background: color-mix(in srgb, var(--card) 55%, transparent);
+    backdrop-filter: blur(14px);
+    border:1px solid color-mix(in srgb, var(--text) 7%, transparent);
+  }
+  .app-icon { width:38px; height:38px; border-radius:12px; position:relative; }
+  .app-icon::after { content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(160deg, rgb(255 255 255 / .22), transparent 55%); }
+  .ai-free { background:#3a3b45; }
+  .ai-cash { background: var(--accent); box-shadow:0 8px 20px -8px color-mix(in srgb, var(--accent) 70%, transparent); }
+  .ai-cash::before { content:"₽"; position:absolute; inset:0; display:grid; place-items:center; color:#fff; font-weight:700; font-size:17px; font-family:"SN Pro", sans-serif; }
+  .ai-notes { background:#c8a24a; }
+  .ai-cam { background:#4a6f57; }
+  .home-ind { position:absolute; left:50%; bottom:9px; transform:translateX(-50%); width:104px; height:4px; border-radius:99px; background: color-mix(in srgb, var(--text) 40%, transparent); z-index:3; }
+
+  .caption-row { display:flex; align-items:center; justify-content:space-between; margin-top:10px; padding:0 4px; font-size:10.5px; color:var(--ink-soft); }
+  .caption-row .dot-accent { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-right:6px; }
+
+  .foot { margin-top:30px; color:var(--ink-soft); font-size:11.5px; line-height:1.6; display:flex; gap:22px; flex-wrap:wrap; }
+  .foot code { font-family:ui-monospace, "SF Mono", Menlo, monospace; font-size:10.5px; color:var(--ink); background: color-mix(in srgb, var(--ink) 7%, transparent); padding:2px 6px; border-radius:6px; }
+
+  /* print / single-widget screenshot modes */
+  body.only-a .stage:not([data-stage="a"]),
+  body.only-b .stage:not([data-stage="b"]),
+  body.only-c .stage:not([data-stage="c"]) { display:none; }
+  body.only-a .stages, body.only-b .stages, body.only-c .stages { grid-template-columns:minmax(0, 500px); justify-content:center; }
+  body.solo .studio-head { display:none; }
+  body.solo { padding:24px; }
+
+  /* single-widget picture mode: ?widget=a (no phone, no studio chrome) */
+  body.widget-only {
+    padding:34px;
+    min-height:auto;
+    background:
+      radial-gradient(120% 140% at 18% 0%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 55%),
+      radial-gradient(120% 120% at 100% 100%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 60%),
+      linear-gradient(160deg, var(--wall-1), var(--wall-3));
+  }
+  body.widget-only .foot,
+  body.widget-only .stage-head,
+  body.widget-only .caption-row,
+  body.widget-only .stage-note,
+  body.widget-only .statusbar,
+  body.widget-only .clock,
+  body.widget-only .dock,
+  body.widget-only .home-ind,
+  body.widget-only .toast { display:none; }
+  body.widget-only .frame::before { display:none; }
+  body.widget-only .stages { display:block; }
+  body.widget-only .stage { background:transparent; border:0; padding:0; max-width:360px; margin:0 auto; }
+  body.widget-only .frame {
+    border:0; background:transparent; box-shadow:none; aspect-ratio:auto; border-radius:0; overflow:visible;
+  }
+  body.widget-only .homescreen { padding:0; }
+</style>
+</head>
+<body data-theme="dark">
+
+  <header class="studio-head">
+    <div class="title-block">
+      <h1>Cashiro <span>·</span> widget studies</h1>
+      <p>Three home-screen directions built from the app's own tokens — <b>SN Pro</b>, Catppuccin surfaces, 28dp cards, accent from Appearance. All three fit RemoteViews; tap a row to see the deep-link behavior.</p>
+    </div>
+
+    <div class="controls" aria-label="Mockup controls">
+      <div class="ctl-group">
+        <span class="ctl-label">Theme</span>
+        <div class="seg" role="group" aria-label="Theme">
+          <button data-set-theme="dark" aria-pressed="true">Dark</button>
+          <button data-set-theme="light" aria-pressed="false">Light</button>
+          <button data-set-theme="amoled" aria-pressed="false">AMOLED</button>
+        </div>
+      </div>
+      <div class="ctl-group">
+        <span class="ctl-label">Accent</span>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="privacy">
+        <span class="track"></span>
+        <span class="switch-label">Hide balances</span>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="mixed">
+        <span class="track"></span>
+        <span class="switch-label">Mixed currency</span>
+      </label>
+    </div>
+  </header>
+
+  <main class="stages">
+
+    <!-- ============ A · Ledger 4×2 ============ -->
+    <section class="stage" data-stage="a">
+      <div class="stage-head">
+        <span class="stage-name"><em>A</em> — Ledger</span>
+        <span class="stage-size">4 × 2</span>
+      </div>
+
+      <div class="frame">
+        <div class="statusbar">
+          <span>9:41</span>
+          <span class="status-right">
+            <span class="sig"><i></i><i></i><i></i><i></i></span>
+            <span class="wifi"></span>
+            <span class="batt"></span>
+          </span>
+        </div>
+        <div class="clock">
+          <div class="time">9:41</div>
+          <div class="date">Thursday, 22 October</div>
+        </div>
+        <div class="homescreen">
+          <div class="widget w-ledger" data-widget="a">
+            <div class="ledger-head">
+              <span class="label tap" data-open="Cashiro">Total</span>
+              <button class="add-btn" data-add="1" aria-label="Add transaction" title="Add transaction">+</button>
+            </div>
+            <div class="big-amount amt tap" data-total="5.482,17 KM" data-open="Cashiro">5.482,17 KM</div>
+            <div class="ledger-rows">
+              <div class="lrow tap" data-account="Raiffeisen" data-last4="1234">
+                <span class="bank-dot" style="--bank:#f5c518">R</span>
+                <span class="bank-meta">
+                  <span class="bank-name">Raiffeisen</span>
+                  <span class="bank-sub">···· 1234</span>
+                </span>
+                <span class="amount amt" data-km="2.340,50">2.340,50</span>
+              </div>
+              <div class="lrow tap" data-account="UniCredit" data-last4="5678">
+                <span class="bank-dot" style="--bank:#e0002a">U</span>
+                <span class="bank-meta">
+                  <span class="bank-name">UniCredit</span>
+                  <span class="bank-sub">···· 5678</span>
+                </span>
+                <span class="amount amt" data-km="1.890,67">1.890,67</span>
+              </div>
+              <div class="lrow tap" data-account="Intesa" data-last4="9012">
+                <span class="bank-dot" style="--bank:#0a8f3c">I</span>
+                <span class="bank-meta">
+                  <span class="bank-name">Intesa</span>
+                  <span class="bank-sub">···· 9012</span>
+                </span>
+                <span class="amount amt" data-km="1.251,00" data-mixed="640,00 €">1.251,00</span>
+              </div>
+            </div>
+            <div class="updated">updated 2 min ago</div>
+          </div>
+        </div>
+        <div class="toast">Opening</div>
+        <div class="dock">
+          <span class="app-icon ai-free"></span>
+          <span class="app-icon ai-cash"></span>
+          <span class="app-icon ai-notes"></span>
+          <span class="app-icon ai-cam"></span>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+
+      <div class="caption-row"><span><span class="dot-accent"></span>Total + 3 accounts</span><span>tap row → detail</span></div>
+      <p class="stage-note"><b>Ship this one.</b> Best information density; resizes gracefully to 4×3 by adding a fourth row. Total collapses to <code>—</code> when currencies mix.</p>
+    </section>
+
+    <!-- ============ B · Stack 4×4 ============ -->
+    <section class="stage" data-stage="b">
+      <div class="stage-head">
+        <span class="stage-name"><em>B</em> — Stack</span>
+        <span class="stage-size">4 × 4</span>
+      </div>
+
+      <div class="frame">
+        <div class="statusbar">
+          <span>9:41</span>
+          <span class="status-right">
+            <span class="sig"><i></i><i></i><i></i><i></i></span>
+            <span class="wifi"></span>
+            <span class="batt"></span>
+          </span>
+        </div>
+        <div class="clock" style="padding-bottom:14px">
+          <div class="time">9:41</div>
+          <div class="date">Thursday, 22 October</div>
+        </div>
+        <div class="homescreen">
+          <div class="widget w-stack" data-widget="b">
+            <div class="stack-head">
+              <span class="wordmark"><i></i>Cashiro</span>
+              <span class="chev">◫</span>
+            </div>
+            <div class="stack-total amt" data-total="5.482,17 KM">5.482,17 KM</div>
+
+            <div class="acct tap" data-initial="R" data-account="Raiffeisen" data-last4="1234">
+              <div class="acct-top">
+                <span class="acct-name">Raiffeisen <span class="main-chip">Main</span></span>
+                <span class="chev">⌄</span>
+              </div>
+              <div class="acct-amts">
+                <span class="acct-amount amt" data-km="2.340,50 KM">2.340,50 KM</span>
+                <span class="acct-sub">···· 1234</span>
+              </div>
+            </div>
+
+            <div class="acct tap" data-initial="U" data-account="UniCredit" data-last4="5678">
+              <div class="acct-top">
+                <span class="acct-name">UniCredit</span>
+                <span class="chev">⌄</span>
+              </div>
+              <div class="acct-amts">
+                <span class="acct-amount amt" data-km="1.890,67 KM">1.890,67 KM</span>
+                <span class="acct-sub">···· 5678</span>
+              </div>
+            </div>
+
+            <div class="acct tap" data-initial="I" data-account="Intesa" data-last4="9012">
+              <div class="acct-top">
+                <span class="acct-name">Intesa</span>
+                <span class="chev">⌄</span>
+              </div>
+              <div class="acct-amts">
+                <span class="acct-amount amt" data-km="1.251,00 KM" data-mixed="640,00 €">1.251,00 KM</span>
+                <span class="acct-sub">···· 9012</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="toast">Opening</div>
+        <div class="dock">
+          <span class="app-icon ai-free"></span>
+          <span class="app-icon ai-cash"></span>
+          <span class="app-icon ai-notes"></span>
+          <span class="app-icon ai-cam"></span>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+
+      <div class="caption-row"><span><span class="dot-accent"></span>One card per account</span><span>mirrors Manage&nbsp;Accounts</span></div>
+      <p class="stage-note"><b>Most "Cashiro".</b> Bank-letter watermark at 5% behind each mini-card, Main chip on your primary account. Third card ends the widget — a 4th needs 4×5.</p>
+    </section>
+
+    <!-- ============ C · Ticker 4×1 ============ -->
+    <section class="stage" data-stage="c">
+      <div class="stage-head">
+        <span class="stage-name"><em>C</em> — Ticker</span>
+        <span class="stage-size">4 × 1</span>
+      </div>
+
+      <div class="frame">
+        <div class="statusbar">
+          <span>9:41</span>
+          <span class="status-right">
+            <span class="sig"><i></i><i></i><i></i><i></i></span>
+            <span class="wifi"></span>
+            <span class="batt"></span>
+          </span>
+        </div>
+        <div class="clock">
+          <div class="time">9:41</div>
+          <div class="date">Thursday, 22 October</div>
+        </div>
+        <div class="homescreen">
+          <div class="widget w-ticker" data-widget="c">
+            <div class="total-pill tap" data-open="Cashiro">
+              <b class="amt" data-total="5.482,17 KM">5.482,17 KM</b>
+              <span>total</span>
+            </div>
+            <div class="seg-cell tap" data-account="Raiffeisen" data-last4="1234">
+              <span class="seg-bank" style="--bank:#f5c518"><i></i>RAI</span>
+              <span class="seg-amount amt" data-km="2.340">2.340</span>
+            </div>
+            <div class="seg-cell tap" data-account="UniCredit" data-last4="5678">
+              <span class="seg-bank" style="--bank:#e0002a"><i></i>UCB</span>
+              <span class="seg-amount amt" data-km="1.891">1.891</span>
+            </div>
+            <div class="seg-cell tap" data-account="Intesa" data-last4="9012">
+              <span class="seg-bank" style="--bank:#0a8f3c"><i></i>INT</span>
+              <span class="seg-amount amt" data-km="1.251" data-mixed="640 €">1.251</span>
+            </div>
+          </div>
+        </div>
+        <div class="toast">Opening</div>
+        <div class="dock">
+          <span class="app-icon ai-free"></span>
+          <span class="app-icon ai-cash"></span>
+          <span class="app-icon ai-notes"></span>
+          <span class="app-icon ai-cam"></span>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+
+      <div class="caption-row"><span><span class="dot-accent"></span>One strip, three tap zones</span><span>never truncates amounts</span></div>
+      <p class="stage-note"><b>The daily driver.</b> Pinned under the clock; bank names shorten to 3-letter codes before any number truncates. Total pill opens the app.</p>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <span>Tokens: <code>#111318</code> bg · <code>#1E1F25</code> card · <code>#E2E2E9</code> text · 28dp radius</span>
+    <span>Type: SN Pro 400/600/700 · tabular figures</span>
+    <span>Refresh: immediate on balance write · 15-min WorkManager fallback</span>
+  </footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var ACCENTS = [
+    ["Rosewater", "#d29182"], ["Flamingo", "#dd7878"], ["Pink", "#ea76cb"],
+    ["Mauve", "#8839ef"], ["Red", "#d20f39"], ["Peach", "#fe640b"],
+    ["Yellow", "#df8e1d"], ["Green", "#549e43"], ["Teal", "#179299"],
+    ["Sapphire", "#209fb5"], ["Blue", "#007aff"], ["Lavender", "#7287fd"]
+  ];
+
+  var params = new URLSearchParams(location.search);
+  var theme = params.get("theme");
+  var only = (params.get("only") || "").toLowerCase();
+  var widget = (params.get("widget") || "").toLowerCase();
+
+  function setTheme(t) {
+    document.body.dataset.theme = t;
+    document.querySelectorAll("[data-set-theme]").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.setTheme === t));
+    });
+  }
+
+  function setAccent(color) {
+    document.documentElement.style.setProperty("--accent", color);
+    document.querySelectorAll("#swatches button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.accent === color));
+    });
+  }
+
+  // Build accent swatches from the app's real accent list
+  var sw = document.getElementById("swatches");
+  ACCENTS.forEach(function (pair) {
+    var b = document.createElement("button");
+    b.style.setProperty("--sw", pair[1]);
+    b.dataset.accent = pair[1];
+    b.title = pair[0];
+    b.setAttribute("aria-label", pair[0]);
+    b.addEventListener("click", function () { setAccent(pair[1]); });
+    sw.appendChild(b);
+  });
+
+  document.querySelectorAll("[data-set-theme]").forEach(function (b) {
+    b.addEventListener("click", function () { setTheme(b.dataset.setTheme); });
+  });
+
+  // Mock "animations": each frame has its own toast
+  function toast(el, text) {
+    var frame = el.closest(".frame");
+    if (!frame) return;
+    var t = frame.querySelector(".toast");
+    if (!t) return;
+    t.textContent = text;
+    t.classList.add("show");
+    clearTimeout(t._h);
+    t._h = setTimeout(function () { t.classList.remove("show"); }, 1400);
+  }
+
+  document.addEventListener("click", function (e) {
+    var addButton = e.target.closest("[data-add]");
+    if (addButton) { toast(addButton, "New transaction"); return; }
+    var target = e.target.closest("[data-open],[data-account]");
+    if (!target) return;
+    if (target.dataset.account) {
+      toast(target, "Opening " + target.dataset.account + " ···· " + target.dataset.last4);
+    } else {
+      toast(target, "Opening Cashiro");
+    }
+  });
+
+  // All monetary display is data-driven so privacy and mixed-currency compose
+  // correctly in any order (unhiding after mixed keeps the em-dash total).
+  function renderValues() {
+    var hide = document.getElementById("privacy").checked;
+    var mixed = document.getElementById("mixed").checked;
+    document.querySelectorAll("[data-km]").forEach(function (el) {
+      var value = mixed && el.dataset.mixed ? el.dataset.mixed : el.dataset.km;
+      el.textContent = hide ? "••••••" : value;
+    });
+    document.querySelectorAll("[data-total]").forEach(function (el) {
+      el.textContent = hide ? "••••••" : (mixed ? "—" : el.dataset.total);
+    });
+  }
+
+  document.getElementById("privacy").addEventListener("change", renderValues);
+  document.getElementById("mixed").addEventListener("change", renderValues);
+
+  // Initial state from URL (headless screenshots: ?theme=light&only=b&solo=1)
+  if (theme) setTheme(theme);
+  if (params.get("privacy") === "1") document.getElementById("privacy").checked = true;
+  if (params.get("mixed") === "1") document.getElementById("mixed").checked = true;
+  if (only) document.body.classList.add("only-" + only);
+  if (params.get("solo") === "1") document.body.classList.add("solo");
+  if (widget) document.body.classList.add("widget-only", "solo", "only-" + widget);
+  setAccent(ACCENTS[10][1]);
+  renderValues();
+})();
+</script>
+</body>
+</html>

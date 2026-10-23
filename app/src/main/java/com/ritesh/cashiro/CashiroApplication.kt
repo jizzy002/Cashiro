@@ -9,6 +9,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.ritesh.cashiro.data.repository.AppLockRepository
 import com.ritesh.cashiro.data.webhook.WebhookSyncScheduler
+import com.ritesh.cashiro.presentation.widget.WidgetBalanceObserver
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +29,9 @@ class CashiroApplication : Application(), Configuration.Provider {
 
     @Inject
     lateinit var webhookSyncScheduler: WebhookSyncScheduler
+
+    @Inject
+    lateinit var widgetBalanceObserver: WidgetBalanceObserver
 
     // Route any unhandled coroutine exception to the CrashHandler so the crash screen
     // appears even when the crash originates inside a coroutine (which normally bypasses
@@ -81,6 +85,7 @@ class CashiroApplication : Application(), Configuration.Provider {
                 Log.e("CashiroApplication", "Error scheduling webhooks", e)
             }
         }
+        widgetBalanceObserver.start()
     }
 
     /**

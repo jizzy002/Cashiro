@@ -21,6 +21,7 @@ import com.ritesh.cashiro.presentation.navigation.Home
 import com.ritesh.cashiro.presentation.navigation.CashiroNavHost
 import com.ritesh.cashiro.presentation.navigation.OnBoarding
 import com.ritesh.cashiro.presentation.navigation.Settings
+import com.ritesh.cashiro.presentation.navigation.AccountDetail
 import com.ritesh.cashiro.presentation.navigation.AddTransaction
 import com.ritesh.cashiro.presentation.navigation.TransactionDetail
 import com.ritesh.cashiro.presentation.ui.theme.CashiroTheme
@@ -35,7 +36,10 @@ fun CashiroApp(
     onEditComplete: () -> Unit = {},
     addTransactionTab: Int? = null,
     addTransactionType: String? = null,
-    onAddComplete: () -> Unit = {}
+    onAddComplete: () -> Unit = {},
+    openAccountBankName: String? = null,
+    openAccountLast4: String? = null,
+    onOpenAccountComplete: () -> Unit = {}
 ) {
     val themeUiState by themeViewModel.themeUiState.collectAsStateWithLifecycle()
     val appLockUiState by appLockViewModel.uiState.collectAsStateWithLifecycle()
@@ -97,6 +101,15 @@ fun CashiroApp(
         addTransactionTab?.let { tab ->
             navController.navigate(AddTransaction(initialTab = tab, type = addTransactionType))
             onAddComplete()
+        }
+    }
+
+    LaunchedEffect(openAccountBankName, openAccountLast4) {
+        val bank = openAccountBankName
+        val last4 = openAccountLast4
+        if (bank != null && last4 != null) {
+            navController.navigate(AccountDetail(bankName = bank, accountLast4 = last4))
+            onOpenAccountComplete()
         }
     }
 

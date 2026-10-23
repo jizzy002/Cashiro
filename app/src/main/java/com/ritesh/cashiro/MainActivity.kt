@@ -47,6 +47,9 @@ class MainActivity : AppCompatActivity() {
         const val ACTION_ADD_TRANSACTION = "com.ritesh.cashiro.action.ADD_TRANSACTION"
         const val ACTION_ADD_SUBSCRIPTION = "com.ritesh.cashiro.action.ADD_SUBSCRIPTION"
         const val ACTION_ADD_TRANSFER = "com.ritesh.cashiro.action.ADD_TRANSFER"
+        const val ACTION_OPEN_ACCOUNT = "com.ritesh.cashiro.action.OPEN_ACCOUNT"
+        const val EXTRA_BANK_NAME = "bank_name"
+        const val EXTRA_ACCOUNT_LAST4 = "account_last4"
     }
 
     private val themeViewModel: ThemeViewModel by viewModels()
@@ -68,6 +71,12 @@ class MainActivity : AppCompatActivity() {
 
     // Initial transaction type to pre-select
     var addTransactionType by mutableStateOf<String?>(null)
+        private set
+
+    // Account to open when launched from the widget
+    var openAccountBankName by mutableStateOf<String?>(null)
+        private set
+    var openAccountLast4 by mutableStateOf<String?>(null)
         private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,6 +121,12 @@ class MainActivity : AppCompatActivity() {
                     addTransactionTab = null
                     addTransactionType = null
                 },
+                openAccountBankName = openAccountBankName,
+                openAccountLast4 = openAccountLast4,
+                onOpenAccountComplete = {
+                    openAccountBankName = null
+                    openAccountLast4 = null
+                },
                 appLockViewModel = appLockViewModel,
                 themeViewModel = themeViewModel,
             )
@@ -141,6 +156,14 @@ class MainActivity : AppCompatActivity() {
             ACTION_ADD_TRANSFER -> {
                 addTransactionTab = 0
                 addTransactionType = "TRANSFER"
+            }
+            ACTION_OPEN_ACCOUNT -> {
+                val bank = intent.getStringExtra(EXTRA_BANK_NAME)
+                val last4 = intent.getStringExtra(EXTRA_ACCOUNT_LAST4)
+                if (bank != null && last4 != null) {
+                    openAccountBankName = bank
+                    openAccountLast4 = last4
+                }
             }
         }
     }
